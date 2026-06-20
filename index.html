@@ -24,6 +24,7 @@
 <script src="./lib/jspdf/jspdf.umd.min.js" defer></script>
 <script src="./lib/jspdf/jspdf.plugin.autotable.min.js" defer></script>
 <script src="./lib/xlsx/xlsx.full.min.js" defer></script>
+<script src="./lib/sortable/Sortable.min.js" defer></script>
 
 <style>
 /* ============================================================
@@ -240,6 +241,7 @@ input,select,textarea{font-family:inherit}
   flex:1;
 }
 .map-wrap{flex:1;display:flex;flex-direction:column;position:relative;overflow:hidden}
+#leafletMap{flex:1;width:100%;background:var(--bg-2);min-height:200px}
 
 /* ── PANTALLA DE MÓDULO — header con botón atrás ── */
 .module-header{
@@ -789,6 +791,99 @@ input,select,textarea{font-family:inherit}
 .mapeo-acc-body.open{display:block}
 
 /* ── MÓDULO MAPA ── */
+
+/* Panel PK·MAPA deslizante desde abajo */
+#pkMapaSheet{
+  position:absolute;left:0;right:0;bottom:0;z-index:700;
+  background:var(--bg-1);border-top:1px solid var(--border-2);
+  border-radius:18px 18px 0 0;
+  transition:transform .3s cubic-bezier(.4,0,.2,1);
+  max-height:80%;
+  display:flex;flex-direction:column;
+  box-shadow:0 -6px 30px rgba(0,0,0,.5);
+}
+#pkMapaSheet.collapsed{transform:translateY(calc(100% - 140px))}
+#pkMapaSheet.expanded{transform:translateY(0)}
+.pkm-sheet-handle{width:36px;height:4px;border-radius:3px;background:var(--bg-4);margin:9px auto 0;flex-shrink:0;cursor:pointer}
+.pkm-sheet-peek{padding:0 16px 10px;flex-shrink:0;cursor:pointer}
+.pkm-sheet-titlebar{display:flex;align-items:center;justify-content:space-between;padding:8px 0 6px}
+.pkm-title{font-family:var(--font-cond);font-size:1.05rem;font-weight:900;color:var(--pk);letter-spacing:1.5px}
+.pkm-sub{font-size:.6rem;color:var(--t3);letter-spacing:.5px;margin-top:1px}
+.pkm-chevron{font-size:.8rem;color:var(--t3);transition:transform .3s}
+#pkMapaSheet.expanded .pkm-chevron{transform:rotate(180deg)}
+/* Card de resultado dentro del peek */
+.pkm-res-card{background:var(--bg-2);border:1px solid var(--border);border-radius:var(--r);padding:11px 14px;margin-bottom:6px}
+.pkm-res-idle{font-size:.8rem;color:var(--t3);text-align:center}
+.pkm-res-road{font-family:var(--font-cond);font-size:.85rem;font-weight:700;color:var(--t2);letter-spacing:2px;text-transform:uppercase;margin-bottom:3px}
+.pkm-res-pk{font-family:var(--font-cond);font-size:2rem;font-weight:900;color:var(--pk);line-height:1;text-shadow:0 0 18px rgba(0,196,238,.3)}
+.pkm-res-dist{font-size:.72rem;color:var(--t3);margin-top:3px}
+.pkm-res-coords{font-family:var(--font-mono);font-size:.65rem;color:var(--t3);margin-top:2px}
+.pkm-res-warn{font-family:var(--font-cond);font-size:.9rem;font-weight:700;color:var(--amber);letter-spacing:1px}
+.pkm-res-warn-sub{font-size:.7rem;color:var(--t3);margin-top:3px}
+.pkm-actions{display:flex;gap:6px;margin-bottom:0}
+.pkm-action-btn{
+  flex:1;padding:7px 5px;border-radius:var(--r-sm);font-size:.68rem;font-weight:700;
+  border:1px solid;display:flex;align-items:center;justify-content:center;gap:4px;
+}
+/* Body scrollable del sheet */
+.pkm-body{overflow-y:auto;padding:14px 16px calc(16px + var(--safe-bottom));flex:1}
+.pkm-sec-label{font-size:.62rem;font-weight:700;letter-spacing:1.3px;text-transform:uppercase;color:var(--t3);margin-bottom:7px;margin-top:14px}
+.pkm-sec-label:first-child{margin-top:0}
+/* Fila "Ir a PK" */
+.pkm-pk-row{display:flex;gap:6px;align-items:center;margin-bottom:8px}
+.pkm-inp{flex:1;background:var(--bg-3);border:1px solid var(--border-2);border-radius:var(--r-sm);padding:9px 10px;font-size:.85rem;color:var(--t1);font-family:var(--font);min-width:0}
+.pkm-inp:focus{outline:none;border-color:var(--pk-bd);background:var(--bg-4)}
+.pkm-inp.road{flex:0 0 68px}
+.pkm-inp.km{flex:0 0 58px;text-align:center}
+.pkm-inp.m-inp{flex:0 0 50px;text-align:center}
+.pkm-sep{color:var(--t3);font-weight:700;font-size:.9rem;flex-shrink:0}
+.pkm-go-btn{width:38px;height:38px;border-radius:var(--r-sm);border:none;background:var(--pk);color:#fff;font-size:1.2rem;font-weight:700;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+/* Acordeón coordenadas */
+.pkm-accord{background:var(--bg-2);border:1px solid var(--border);border-radius:var(--r-sm);overflow:hidden;margin-bottom:8px}
+.pkm-accord-head{display:flex;align-items:center;justify-content:space-between;padding:11px 13px;cursor:pointer}
+.pkm-accord-lbl{font-size:.78rem;font-weight:600;color:var(--t2)}
+.pkm-accord-arr{font-size:.65rem;color:var(--t3);transition:transform .2s}
+.pkm-accord-arr.open{transform:rotate(180deg)}
+.pkm-accord-body{padding:0 13px 12px;display:none}
+.pkm-accord-body.open{display:block}
+.pkm-coord-inp{width:100%;background:var(--bg-3);border:1px solid var(--border-2);border-radius:var(--r-sm);padding:9px 10px;font-size:.85rem;color:var(--t1);margin-bottom:6px;font-family:var(--font)}
+.pkm-coord-inp:focus{outline:none;border-color:var(--pk-bd)}
+/* Card medición distancia */
+.pkm-amid-head{display:flex;align-items:center;gap:10px;padding:11px 13px;cursor:pointer;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--r-sm);margin-bottom:6px}
+.pkm-amid-toggle{margin-left:auto;padding:5px 12px;border-radius:20px;border:1px solid var(--border-2);background:transparent;font-size:.7rem;font-weight:700;color:var(--t3)}
+.pkm-amid-toggle.on{background:var(--purple-dim);color:var(--purple);border-color:rgba(192,132,252,.4)}
+/* Lista negra */
+.pkm-ln-head{display:flex;align-items:center;gap:8px;padding:11px 13px;cursor:pointer;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--r-sm)}
+.pkm-ln-tags{display:flex;flex-wrap:wrap;gap:6px;padding:8px 0 2px}
+.pkm-ln-tag{display:inline-flex;align-items:center;gap:5px;padding:4px 9px;border-radius:20px;font-size:.7rem;font-weight:700;background:var(--red-dim);color:var(--red);border:1px solid rgba(255,90,110,.3)}
+.pkm-ln-del{background:none;border:none;color:var(--red);font-size:.9rem;cursor:pointer;padding:0 2px}
+.pkm-ln-add-row{display:flex;gap:6px;margin-top:8px}
+.pkm-ln-inp{flex:1;background:var(--bg-3);border:1px solid var(--border-2);border-radius:var(--r-sm);padding:8px 10px;font-size:.82rem;color:var(--t1)}
+.pkm-ln-add-btn{padding:8px 12px;border-radius:var(--r-sm);border:1px solid var(--border-2);background:var(--bg-3);color:var(--t2);font-size:.78rem;font-weight:700;white-space:nowrap}
+/* Botón SALIR MEDICIÓN */
+#btnSalirMedicion{
+  position:absolute;top:76px;left:50%;transform:translateX(-50%);z-index:650;
+  display:none;
+  background:#B81B2C;color:#fff;border:none;border-radius:24px;
+  padding:10px 20px;font-family:var(--font-cond);font-size:.85rem;font-weight:700;letter-spacing:1.5px;
+  box-shadow:0 4px 16px rgba(0,0,0,.4);
+  align-items:center;gap:8px;
+}
+#btnSalirMedicion.show{display:flex}
+/* FAB Street View — estilo persona */
+#btnStreetViewFab{
+  position:absolute;left:12px;bottom:154px;z-index:650;
+  background:var(--bg-1);border:1px solid var(--border-2);border-radius:14px;
+  color:var(--t2);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  width:58px;height:68px;gap:2px;
+  box-shadow:0 4px 14px rgba(0,0,0,.35);
+}
+#btnStreetViewFab svg .head{fill:var(--pk)}
+#btnStreetViewFab span{font-size:.56rem;font-weight:700;color:var(--t3);letter-spacing:.3px}
+/* Pin arrastrable naranja */
+.pkm-drag-pin-active{cursor:grab}
+
 .map-search-bar{
   position:absolute;top:10px;left:10px;right:10px;z-index:600;
 }
@@ -1007,6 +1102,276 @@ input,select,textarea{font-family:inherit}
 .export-option-name{font-size:.86rem;font-weight:600;color:var(--t1)}
 .export-option-sub{font-size:.7rem;color:var(--t3)}
 
+/* ── EDITOR DE ANEXO ── */
+:root {
+  --annex: #7c3aed;
+  --annex-lt: rgba(124,58,237,.10);
+  --annex-bd: rgba(124,58,237,.35);
+}
+.annex-form{
+  background:var(--bg-card);border:1.5px solid var(--annex-bd);border-radius:var(--r-lg);
+  padding:14px;margin-bottom:10px;
+}
+.annex-form-title{
+  font-size:.7rem;font-weight:700;letter-spacing:.8px;text-transform:uppercase;
+  color:var(--annex);display:flex;align-items:center;gap:6px;margin-bottom:10px;
+}
+.annex-form-title svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2}
+.annex-titulo-input{
+  width:100%;background:var(--bg-2);border:1.5px solid var(--annex-bd);border-radius:var(--r-sm);
+  padding:9px 12px;font-size:.88rem;color:var(--t1);margin-bottom:10px;
+}
+.annex-titulo-input:focus{outline:none;border-color:var(--annex);background:var(--bg-3)}
+.annex-toolbar{
+  display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px;
+  padding-bottom:8px;border-bottom:1px solid var(--border);
+}
+.annex-btn{
+  min-width:28px;height:28px;padding:0 6px;
+  border-radius:5px;border:1px solid var(--border-2);
+  background:transparent;color:var(--t2);font-size:.75rem;font-weight:600;
+  display:flex;align-items:center;justify-content:center;gap:3px;
+  transition:var(--tr);
+}
+.annex-btn:active,.annex-btn.active{background:var(--annex-lt);border-color:var(--annex-bd);color:var(--annex)}
+.annex-btn-sep{width:1px;background:var(--border-2);margin:0 2px;align-self:stretch}
+.annex-editor{
+  min-height:140px;background:var(--bg-2);border:1.5px solid var(--border-2);
+  border-radius:var(--r-sm);padding:10px 12px;font-size:.85rem;color:var(--t1);
+  line-height:1.6;outline:none;margin-bottom:10px;
+}
+.annex-editor:focus{border-color:var(--annex-bd);background:var(--bg-3)}
+.annex-editor:empty::before{content:attr(data-placeholder);color:var(--t3);pointer-events:none}
+.annex-editor table{border-collapse:collapse;width:100%;margin:8px 0}
+.annex-editor td,.annex-editor th{border:1.5px solid var(--annex-bd);padding:5px 8px;min-width:40px}
+.annex-editor th{background:var(--annex-lt);font-weight:600}
+.annex-editor b{font-weight:700}
+.annex-editor i{font-style:italic}
+.annex-editor u{text-decoration:underline}
+.annex-actions{display:flex;gap:8px}
+
+/* ── DRAG HANDLE & LISTA ARRASTRABLE ── */
+.drag-handle{
+  cursor:grab;color:var(--t3);font-size:1.2rem;padding:4px 6px;
+  user-select:none;flex-shrink:0;touch-action:none;
+}
+.drag-handle:active{cursor:grabbing}
+
+/* Ghost (elemento mientras se arrastra) */
+.sortable-ghost{
+  opacity:.35;background:var(--bg-3)!important;
+  border:1.5px dashed var(--accent)!important;
+}
+/* Fallback chosen */
+.sortable-chosen{
+  box-shadow:0 8px 24px rgba(0,0,0,.35)!important;
+  transform:scale(1.02);
+}
+
+/* Registro de tipo Anexo */
+.reg-item.is-annex{
+  border-color:var(--annex-bd);background:var(--annex-lt);
+}
+.reg-item.is-annex .reg-title{color:var(--annex)}
+
+/* Registro base (lista Obra) */
+.reg-item{
+  background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r-lg);
+  padding:11px 12px;margin-bottom:8px;display:flex;align-items:center;gap:10px;
+  transition:box-shadow .18s ease, transform .18s ease;
+}
+.reg-thumb{
+  width:56px;height:56px;border-radius:var(--r-sm);object-fit:cover;flex-shrink:0;
+  background:var(--bg-3);
+}
+.reg-thumb-placeholder{
+  width:56px;height:56px;border-radius:var(--r-sm);flex-shrink:0;
+  background:var(--bg-3);display:flex;align-items:center;justify-content:center;
+}
+.reg-thumb-placeholder svg{width:22px;height:22px;stroke:var(--t3);fill:none;stroke-width:1.5}
+.reg-body{flex:1;min-width:0}
+.reg-title{font-size:.85rem;font-weight:600;color:var(--accent)}
+.reg-meta{font-size:.7rem;color:var(--t3);margin-top:2px}
+.reg-foto-badge{
+  display:inline-flex;align-items:center;gap:3px;font-size:.66rem;font-weight:600;
+  background:var(--bg-3);color:var(--t3);padding:2px 7px;border-radius:10px;margin-top:4px;
+}
+.reg-actions{display:flex;gap:6px;flex-shrink:0}
+.reg-action-btn{
+  width:36px;height:36px;border-radius:var(--r-sm);border:1px solid var(--border-2);
+  background:transparent;color:var(--t2);display:flex;align-items:center;justify-content:center;
+}
+.reg-action-btn svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.8}
+.reg-action-btn:active{background:var(--bg-3)}
+.reg-action-btn.danger{color:var(--red);border-color:rgba(255,90,110,.3)}
+
+/* Cap-views — sub-pantallas del módulo Captura */
+.cap-view{display:none}
+.cap-view.active{display:block}
+
+/* ── MÓDULO CAPTURA/INVENTARI — sistema complet tipus DATACAMP ── */
+:root {
+  --cat-inv:    #1976d2;
+  --cat-inv-dim: rgba(25,118,210,.14);
+  --cat-inv-lt: rgba(25,118,210,.10);
+  --cat-inv-bd: rgba(25,118,210,.35);
+  --cat-obra:  #e65100;
+  --cat-obra-lt: rgba(230,81,0,.10);
+  --cat-obra-bd: rgba(230,81,0,.35);
+  --cat-custom:#546e7a;
+  --cat-custom-lt: rgba(84,110,122,.10);
+  --cat-custom-bd: rgba(84,110,122,.35);
+}
+
+/* Tipo selector — 3 botons al crear */
+.tipus-grid{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+.tipus-btn{
+  padding:13px 16px;border-radius:var(--r);border:none;
+  color:#fff;font-size:.88rem;font-weight:700;text-align:left;
+  display:flex;align-items:center;gap:10px;
+}
+.tipus-btn svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2;flex-shrink:0}
+.tipus-btn.inv   {background:var(--cat-inv)}
+.tipus-btn.obra  {background:var(--cat-obra)}
+.tipus-btn.custom{background:var(--cat-custom)}
+.tipus-btn .tipus-desc{font-size:.72rem;font-weight:400;opacity:.85;display:block;margin-top:1px}
+
+/* Formulari dinàmic */
+.dyn-field{margin-bottom:10px}
+.dyn-field label{font-size:.7rem;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--t3);margin-bottom:5px;display:block}
+.dyn-field input,.dyn-field select,.dyn-field textarea{
+  width:100%;background:var(--bg-3);border:1px solid var(--border-2);border-radius:var(--r-sm);
+  padding:10px 12px;font-size:.88rem;color:var(--t1);
+}
+.dyn-field input:focus,.dyn-field select:focus,.dyn-field textarea:focus{
+  outline:none;border-color:var(--accent-bd);background:var(--bg-4);
+}
+.pk-row{display:flex;align-items:center;gap:8px}
+.pk-row input{flex:1}
+.pk-row b{color:var(--t3);font-size:.9rem}
+
+/* AutoPK */
+.autopk-status{
+  background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r-sm);
+  padding:9px 12px;margin-bottom:8px;font-size:.78rem;color:var(--t2);
+  display:flex;align-items:center;gap:8px;min-height:38px;
+}
+.autopk-status.ok  {border-color:var(--green);background:var(--green-dim);color:var(--green)}
+.autopk-status.warn{border-color:var(--amber);background:var(--amber-dim);color:var(--amber)}
+.autopk-status.err {border-color:var(--red);background:var(--red-dim);color:var(--red)}
+.autopk-icon{font-size:1rem;flex-shrink:0}
+.btn-autopk{
+  width:100%;padding:11px;margin-bottom:10px;
+  border-radius:var(--r-sm);border:1.5px solid var(--pk-bd);
+  background:var(--pk-dim);color:var(--pk);font-size:.82rem;font-weight:700;
+  display:flex;align-items:center;justify-content:center;gap:6px;
+}
+.btn-autopk:active{opacity:.8}
+
+/* Watermark toggle */
+.wm-row{
+  display:flex;align-items:center;gap:10px;
+  background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r);
+  padding:10px 13px;margin-bottom:10px;
+}
+.wm-row-text{flex:1}
+.wm-row-title{font-size:.82rem;font-weight:600;color:var(--t1)}
+.wm-row-warn{font-size:.66rem;color:var(--amber);margin-top:2px}
+
+/* Foto preview grid */
+.foto-grid{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.foto-item{
+  width:72px;height:72px;border-radius:var(--r-sm);overflow:hidden;
+  position:relative;flex-shrink:0;border:1px solid var(--border);
+}
+.foto-item img{width:100%;height:100%;object-fit:cover}
+.foto-del{
+  position:absolute;top:2px;right:2px;width:18px;height:18px;
+  border-radius:50%;background:rgba(198,12,48,.85);border:none;color:#fff;
+  font-size:.65rem;display:flex;align-items:center;justify-content:center;
+}
+.foto-buttons{display:flex;gap:8px;margin-bottom:12px}
+.btn-foto{
+  flex:1;padding:11px;border-radius:var(--r-sm);border:1px solid var(--border-2);
+  background:var(--bg-card);color:var(--t2);font-size:.82rem;font-weight:600;
+  display:flex;align-items:center;justify-content:center;gap:6px;
+}
+.btn-foto svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.8}
+
+/* Camp personalitzat form inline */
+.camp-custom-form{
+  background:var(--bg-2);border:1.5px dashed var(--border-2);border-radius:var(--r);
+  padding:12px;margin-bottom:10px;display:none;
+}
+.custom-field-group{
+  background:var(--cat-custom-lt);border:1px solid var(--cat-custom-bd);border-radius:var(--r-sm);
+}
+
+/* Punts llistat — pantalla de registros */
+.punts-screen{display:none}
+.punts-screen.active{display:block}
+.reg-count-btn{
+  width:100%;padding:12px;border-radius:var(--r);
+  background:var(--bg-card);border:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:8px;
+}
+.reg-count-num{font-family:var(--font-cond);font-size:1.4rem;font-weight:800;color:var(--accent)}
+
+/* Config screen */
+.config-screen{display:none}
+.config-screen.active{display:block}
+.field-tag{
+  display:flex;align-items:center;justify-content:space-between;gap:8px;
+  background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r-sm);
+  padding:9px 12px;margin-bottom:6px;font-size:.82rem;
+}
+.field-type-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px}
+.btn-field-type{
+  padding:9px;border-radius:var(--r-sm);border:1px solid var(--border-2);
+  background:var(--bg-card);color:var(--t2);font-size:.78rem;font-weight:600;text-align:center;
+}
+
+/* Obra detall modal */
+.obra-dates-row{display:flex;gap:8px;margin-bottom:10px}
+.obra-dates-row .field-group{flex:1;margin-bottom:0}
+
+/* ── Módulo Inventarios — color propio en el grid ── */
+.module-card--inv{
+  border-color:var(--cat-inv-bd);
+  background:linear-gradient(135deg,var(--bg-card),var(--cat-inv-lt));
+}
+.module-card--inv:active{border-color:var(--cat-inv);transform:scale(.97)}
+.module-card--inv .module-name{color:var(--cat-inv)}
+
+/* ── Subtabs Inventarios — 3 pestañas claras ── */
+#invTabBar{
+  display:flex;background:var(--bg-2);border-radius:var(--r-sm);
+  overflow:hidden;margin-bottom:14px;border:1px solid var(--border);
+}
+#invTabBar .subtab{flex:1;padding:9px 5px;text-align:center;
+  font-family:var(--font-cond);font-size:.76rem;font-weight:700;letter-spacing:.3px;
+  color:var(--t3);background:transparent;border:none;
+}
+#invTabBar .subtab.active{background:var(--cat-inv);color:#fff}
+
+/* ── Zona Descargas / Exportación inventario ── */
+.inv-export-section{margin-top:8px}
+.inv-export-btn{
+  width:100%;padding:13px 16px;border-radius:var(--r);
+  display:flex;align-items:center;gap:12px;
+  background:var(--bg-card);border:1px solid var(--border);
+  transition:var(--tr);margin-bottom:8px;text-align:left;
+}
+.inv-export-btn:active{border-color:var(--accent-bd);background:var(--accent-dim)}
+.inv-export-btn-icon{
+  width:40px;height:40px;border-radius:var(--r-sm);
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.inv-export-btn-icon svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.8}
+.inv-export-name{font-size:.86rem;font-weight:600;color:var(--t1)}
+.inv-export-sub{font-size:.7rem;color:var(--t3)}
+
 @media(min-width:561px){
   .app-shell{
     border-left:1px solid var(--border);
@@ -1099,12 +1464,12 @@ input,select,textarea{font-family:inherit}
             <div class="module-sub">Registro y seguimiento</div>
           </button>
 
-          <button class="module-card" onclick="irAModulo('captura')">
-            <div class="module-icon" style="background:var(--purple-dim);color:var(--purple)">
-              <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2Z"/><circle cx="12" cy="13" r="4"/></svg>
+          <button class="module-card module-card--inv" onclick="irAModulo('inventarios')">
+            <div class="module-icon" style="background:var(--cat-inv-lt);color:var(--cat-inv)">
+              <svg viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6"/><path d="M9 16h4"/></svg>
             </div>
-            <div class="module-name">Captura</div>
-            <div class="module-sub">Foto · Obra · Inventario</div>
+            <div class="module-name">Inventarios</div>
+            <div class="module-sub">Captura · Obra · Datos</div>
           </button>
 
           <button class="module-card" onclick="irAModulo('mapa')">
@@ -1182,65 +1547,291 @@ input,select,textarea{font-family:inherit}
       </button>
     </div>
 
-    <div class="screen" id="screenCaptura" style="position:relative">
+    <div class="screen" id="screenInventarios">
       <div class="module-header">
-        <button class="module-back-btn" onclick="volverAlDashboard()" aria-label="Volver">
+        <button class="module-back-btn" onclick="capBackBtn()" aria-label="Volver" id="capBackBtn">
           <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
         </button>
-        <div class="module-header-title">Captura</div>
+        <div class="module-header-title" id="capHeaderTitle">Inventarios</div>
       </div>
-      <div class="screen-content">
+      <div class="screen-content" id="capContent">
 
-        <div class="subtabs">
-          <button class="subtab active" data-sub="foto" onclick="cambiarSubtabCaptura(this,'foto')">Foto</button>
-          <button class="subtab" data-sub="obra" onclick="cambiarSubtabCaptura(this,'obra')">Obra</button>
-          <button class="subtab" data-sub="inventario" onclick="cambiarSubtabCaptura(this,'inventario')">Inventario</button>
+        <!-- ── VISTA HOME: 3 Pestañas Inventarios (Nuevo / Historial / Descargas) ── -->
+        <div id="capHome" class="cap-view active">
+          <div id="invTabBar">
+            <button class="subtab active" data-sub="nuevo" onclick="invCambiarTab(this,'nuevo')">📋 Nuevo</button>
+            <button class="subtab" data-sub="historial" onclick="invCambiarTab(this,'historial')">📂 Historial</button>
+            <button class="subtab" data-sub="descargas" onclick="invCambiarTab(this,'descargas')">⬇️ Descargas</button>
+          </div>
+          <!-- Panel Nuevo Inventario (antes subtab Projectes) -->
+          <div class="subpanel active" id="subNuevoInv">
+            <div class="tipus-grid">
+
+
+              <button class="tipus-btn inv" onclick="capCrearProjecte('inventari')">
+                <svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                <div>
+                  Inventari (Carretera / PK)
+                  <span class="tipus-desc">Registre estàndard amb carretera, PK, marge i observacions</span>
+                </div>
+              </button>
+              <button class="tipus-btn obra" onclick="capCrearProjecte('obra')">
+                <svg viewBox="0 0 24 24"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg>
+                <div>
+                  Seguiment d'Obra
+                  <span class="tipus-desc">Amb dates d'inici/fi i percentatge de progrés</span>
+                </div>
+              </button>
+              <button class="tipus-btn custom" onclick="capCrearProjecte('personalitzat')">
+                <svg viewBox="0 0 24 24"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/></svg>
+                <div>
+                  Personalitzat (A mida)
+                  <span class="tipus-desc">Constructor de formulari: tria quins camps vols</span>
+                </div>
+              </button>
+            </div>
+
+            <div class="section-label">Treballs recents</div>
+              <div id="capRecentsList"></div>
+          </div><!-- /subNuevoInv -->
+
+          <!-- Panel Historial / Treballs (Drag & Drop Sortable.js) -->
+          <div class="subpanel" id="subHistorial">
+            <div class="section-label">Treballs recents ordenables</div>
+            <div id="histInvList">
+              <div class="inc-empty" style="padding:30px 0">
+                <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><polyline points="14 2 14 8 20 8"/></svg>
+                <div class="inc-empty-text">No hay trabajos en curso</div>
+              </div>
+            </div>
+            <div style="margin-top:12px">
+              <button class="btn-secondary" style="width:100%;border-style:dashed;color:var(--cat-inv)" onclick="invCambiarTab(document.querySelector('[data-sub=nuevo]'),'nuevo')">
+                <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" fill="none" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Nuevo inventario
+              </button>
+            </div>
+          </div><!-- /subHistorial -->
+
+          <!-- Panel Descargas / Exportación centralizada -->
+          <div class="subpanel" id="subDescargas">
+            <div class="section-label">Exportar inventario activo</div>
+
+            <button class="inv-export-btn" onclick="capExportarPDF()">
+              <div class="inv-export-btn-icon" style="background:var(--red-dim);color:var(--red)">
+                <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><polyline points="14 2 14 8 20 8"/></svg>
+              </div>
+              <div>
+                <div class="inv-export-name">Descargar PDF</div>
+                <div class="inv-export-sub">Portada · registros por página · fotos + watermark</div>
+              </div>
+            </button>
+
+            <button class="inv-export-btn" onclick="capExportarExcel()">
+              <div class="inv-export-btn-icon" style="background:var(--green-dim);color:var(--green)">
+                <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+              </div>
+              <div>
+                <div class="inv-export-name">Descargar Excel</div>
+                <div class="inv-export-sub">Todos los registros en hoja de cálculo XLSX</div>
+              </div>
+            </button>
+
+            <button class="inv-export-btn" onclick="capExportarZIPFotos()">
+              <div class="inv-export-btn-icon" style="background:var(--amber-dim);color:var(--amber)">
+                <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              </div>
+              <div>
+                <div class="inv-export-name">Descargar ZIP de fotos</div>
+                <div class="inv-export-sub">Nombres estructurados: Carretera_PK_Marge</div>
+              </div>
+            </button>
+
+            <div class="section-label" style="margin-top:16px">Backup global</div>
+
+            <button class="inv-export-btn" onclick="exportarBackupCompleto()">
+              <div class="inv-export-btn-icon" style="background:var(--pk-dim);color:var(--pk)">
+                <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              </div>
+              <div>
+                <div class="inv-export-name">Backup completo</div>
+                <div class="inv-export-sub">Proyectos, fotos, trazas en formato JSON</div>
+              </div>
+            </button>
+
+            <button class="inv-export-btn" onclick="document.getElementById('inputImportarBackup').click()">
+              <div class="inv-export-btn-icon" style="background:var(--accent-dim);color:var(--accent)">
+                <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              </div>
+              <div>
+                <div class="inv-export-name">Importar backup</div>
+                <div class="inv-export-sub">Restaurar datos desde archivo JSON</div>
+              </div>
+            </button>
+          </div><!-- /subDescargas -->
+
+        </div><!-- /capHome cap-view active --></div>
+
+        <!-- ── VISTA CONFIGURADOR: Constructor de camps personalitzats ── -->
+        <div id="capConfig" class="cap-view">
+          <div class="section-label">Disseny del formulari</div>
+          <div id="capFieldList"><p style="color:var(--t3);text-align:center;padding:12px;font-size:.82rem">Formulari buit — afegeix camps</p></div>
+
+          <div class="section-label" style="margin-top:12px">Tipus de camp</div>
+          <div class="field-type-grid">
+            <button class="btn-field-type" onclick="capAddField('text')">+ Text lliure</button>
+            <button class="btn-field-type" onclick="capAddField('carretera','Carretera')">+ Carretera</button>
+            <button class="btn-field-type" onclick="capAddField('pk','PK')">+ Bloc PK</button>
+            <button class="btn-field-type" onclick="capAddField('marge','Marge')">+ Marge</button>
+            <button class="btn-field-type" onclick="capAddField('obs','Observacions')">+ Observacions</button>
+          </div>
+          <button class="btn-main" onclick="capFinalitzarConfig()">CREAR FORMULARI 🚀</button>
+          <button class="btn-secondary" style="width:100%;margin-top:8px" onclick="capAnarHome()">Cancelar</button>
         </div>
 
-        <div class="subpanel active" id="subFoto">
-          <div class="fr-preview" id="frPreview">
-            <svg class="fr-preview-icon" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2Z"/><circle cx="12" cy="13" r="4"/></svg>
-            <div class="fr-preview-text">Toca para hacer una foto</div>
+        <!-- ── VISTA FORMULARI: Entrada de dades ── -->
+        <div id="capForm" class="cap-view">
+          <div class="dyn-field">
+            <label>Nom del projecte</label>
+            <input type="text" id="capTitol" placeholder="Ex: Reposició H-75 C-26">
           </div>
-          <button class="btn-main" onclick="tomarFotoRapida()">
-            <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2Z"/><circle cx="12" cy="13" r="4"/></svg>
-            HACER FOTO
+
+          <!-- Modal detall obra (dates + progrés) inline -->
+          <div id="capObraDetall" style="display:none;background:var(--bg-card);border:1px solid var(--cat-obra-bd);border-radius:var(--r);padding:12px;margin-bottom:10px">
+            <div style="font-size:.7rem;font-weight:700;color:var(--cat-obra);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">📋 Detall de l'obra</div>
+            <div class="obra-dates-row">
+              <div class="field-group">
+                <div class="field-label">Data inici</div>
+                <input class="field-input" type="date" id="capObraInici">
+              </div>
+              <div class="field-group">
+                <div class="field-label">Data fi estimada</div>
+                <input class="field-input" type="date" id="capObraFi">
+              </div>
+            </div>
+            <div class="dyn-field">
+              <label>Progrés inicial (%)</label>
+              <input type="number" id="capObraProgres" min="0" max="100" value="0">
+            </div>
+          </div>
+
+          <div class="autopk-status" id="capAutopkStatus">
+            <span class="autopk-icon" id="capAutopkIcon">📡</span>
+            <span id="capAutopkText">Cerca la teva posició GPS...</span>
+          </div>
+          <button class="btn-autopk" onclick="capExecutarAutoPK()">
+            🔍 ON ESTIC ARA? (Auto-PK)
           </button>
-          <div class="btn-row" style="margin-top:10px">
-            <button class="btn-secondary" onclick="guardarFotoRapida()" id="btnGuardarFotoRapida" disabled>
-              <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
-              Guardar en historial
+
+          <div id="capDynamicFields"></div>
+
+          <!-- Camp personalitzat inline -->
+          <div class="camp-custom-form" id="capCampCustomForm">
+            <div style="font-size:.7rem;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">➕ Nou camp personalitzat</div>
+            <div class="dyn-field" style="margin-bottom:8px">
+              <label>Nom del camp</label>
+              <input type="text" id="capCampNomInput" placeholder="Ex: Amplada de calçada…" onkeydown="if(event.key==='Enter'){event.preventDefault();capConfirmarCampCustom();}">
+            </div>
+            <div style="display:flex;gap:8px">
+              <button class="btn-main" style="flex:1;padding:8px" onclick="capConfirmarCampCustom()">✔ Afegir</button>
+              <button class="btn-secondary" style="flex:1;padding:8px" onclick="capTancarCampCustom()">✕ Cancel·lar</button>
+            </div>
+          </div>
+          <button id="btnCapAfegirCamp" class="btn-secondary" style="width:100%;margin-bottom:10px;border-style:dashed;color:var(--t3)" onclick="capObrirCampCustom()">
+            ➕ Afegir camp personalitzat
+          </button>
+
+          <div class="wm-row">
+            <div class="wm-row-text">
+              <div class="wm-row-title">📝 Mostrar dades al peu de foto</div>
+              <div class="wm-row-warn">⚠️ No reversible un cop aplicat</div>
+            </div>
+            <button class="side-toggle" id="capWatermarkToggle"></button>
+          </div>
+
+          <div class="foto-grid" id="capFotoPreview"></div>
+          <div class="foto-buttons">
+            <button class="btn-foto" onclick="document.getElementById('fCapCam').click()">
+              <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2Z"/><circle cx="12" cy="13" r="4"/></svg>
+              📸 CÀMERA
+            </button>
+            <button class="btn-foto" onclick="document.getElementById('fCapGal').click()">
+              <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+              🖼️ GALERIA
             </button>
           </div>
-          <div class="section-label" style="margin-top:18px">Fotos recientes</div>
-          <div id="frRecentList"></div>
+          <input type="file" id="fCapCam" accept="image/*" capture="environment" style="display:none" onchange="capHandleFotos(this)">
+          <input type="file" id="fCapGal" multiple accept="image/*" style="display:none" onchange="capHandleFotos(this)">
+
+          <button class="btn-main" style="margin-bottom:8px" onclick="capSaveReg()">💾 GUARDAR REGISTRE</button>
+          <button id="capBtnCancelarEdicio" class="btn-secondary" style="display:none;width:100%;margin-bottom:8px;border-color:var(--red);color:var(--red)" onclick="capCancelarEdicio()">❌ CANCEL·LAR EDICIÓ</button>
+
+          <button class="reg-count-btn" onclick="capAnarPuntsLlistat()">
+            <span style="font-size:.82rem;font-weight:600;color:var(--t2)">📋 PUNTS RECOLLITS:</span>
+            <span class="reg-count-num" id="capRegCount">0</span>
+          </button>
+          <button class="btn-secondary" style="width:100%;margin-top:8px" onclick="capAnarHome()">⬅️ Menú Principal</button>
         </div>
 
-        <div class="subpanel" id="subObra">
-          <div id="obraListContainer"></div>
-        </div>
+        <!-- ── VISTA PUNTS LLISTAT: Registros arrastrables + anexo ── -->
+        <div id="capPuntsLlistat" class="cap-view">
 
-        <div class="subpanel" id="subInventario">
-          <div id="invListContainer"></div>
+          <div id="capAnnexFormInline" style="display:none" class="annex-form">
+            <div class="annex-form-title">
+              <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><polyline points="14 2 14 8 20 8"/></svg>
+              TÍTOL DE L'ANNEX
+            </div>
+            <input class="annex-titulo-input" id="capAnnexTitol" placeholder="Ex: Annex 1 — Resum de l'estat">
+            <div class="annex-form-title" style="margin-top:4px">CONTINGUT</div>
+            <div class="annex-toolbar">
+              <button class="annex-btn" onmousedown="event.preventDefault();document.execCommand('bold')"><b>B</b></button>
+              <button class="annex-btn" onmousedown="event.preventDefault();document.execCommand('italic')"><i>I</i></button>
+              <button class="annex-btn" onmousedown="event.preventDefault();document.execCommand('underline')"><u>U</u></button>
+              <div class="annex-btn-sep"></div>
+              <button class="annex-btn" onmousedown="event.preventDefault();document.execCommand('justifyLeft')">◀</button>
+              <button class="annex-btn" onmousedown="event.preventDefault();document.execCommand('justifyCenter')">≡</button>
+              <button class="annex-btn" onmousedown="event.preventDefault();document.execCommand('insertUnorderedList')">•—</button>
+              <div class="annex-btn-sep"></div>
+              <button class="annex-btn" onclick="annexInsertTable()" style="color:var(--annex);border-color:var(--annex-bd)">⊞ Taula</button>
+              <button class="annex-btn" onclick="annexAddRow()">+F</button>
+              <button class="annex-btn" onclick="annexRemoveRow()" style="color:var(--red)">−F</button>
+              <button class="annex-btn" onclick="annexAddCol()">+C</button>
+              <button class="annex-btn" onclick="annexRemoveCol()" style="color:var(--red)">−C</button>
+              <button class="annex-btn" onclick="annexDelTable()" style="color:var(--red)">✕T</button>
+              <div class="annex-btn-sep"></div>
+              <button class="annex-btn" onmousedown="event.preventDefault();document.execCommand('removeFormat')">T̶</button>
+            </div>
+            <div class="annex-editor" id="capAnnexEditor" contenteditable="true" data-placeholder="Escriu el contingut de l'annex. Pots afegir text enriquit i taules..."></div>
+            <div class="annex-actions">
+              <button class="btn-main" style="background:var(--annex);border-color:var(--annex)" onclick="capGuardarAnnex()">
+                💾 GUARDAR ANNEX
+              </button>
+              <button class="btn-secondary" onclick="capTancarAnnex()">✕ CANCEL·LAR</button>
+            </div>
+          </div>
+
+          <div id="capRegList"></div>
+
+          <div style="display:flex;flex-direction:column;gap:8px;margin-top:14px">
+            <button class="btn-secondary" onclick="capAnarForm()">✏️ Editar formulari</button>
+            <button class="btn-secondary" style="border-color:var(--annex-bd);color:var(--annex)" onclick="capObrirAnnex()">➕ Afegir Annex / Resum</button>
+            <button class="btn-secondary" onclick="capAnarHome()">⬅️ Menú Principal</button>
+          </div>
         </div>
 
       </div>
-
-      <button class="cap-fab" id="capFab" style="background:var(--purple)" onclick="accionFabCaptura()" aria-label="Añadir">
-        <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-      </button>
     </div>
 
     <div class="screen screen-map" id="screenMapa" style="padding:0">
       <div class="map-wrap">
 
+        <!-- Barra de búsqueda flotante arriba -->
         <div class="map-search-bar">
           <div class="map-search-input-wrap">
             <button class="module-back-btn" style="width:30px;height:30px;flex-shrink:0" onclick="volverAlDashboard()" aria-label="Volver">
               <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
             </button>
             <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            <input class="map-search-input" id="mapSearchInput" placeholder="Buscar población, calle o PK (ej. C-14 129+000)" oninput="onMapSearchInput(this.value)" autocomplete="off">
+            <input class="map-search-input" id="mapSearchInput" placeholder="Municipio, C-14 129, 41.68, 1.27…" oninput="onMapSearchInput(this.value)" autocomplete="off" spellcheck="false">
             <button class="map-search-clear" id="mapSearchClearBtn" onclick="limpiarBusquedaMapa()" aria-label="Limpiar">
               <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </button>
@@ -1248,134 +1839,212 @@ input,select,textarea{font-family:inherit}
           <div class="map-search-drop" id="mapSearchDrop"></div>
         </div>
 
+        <!-- SALIR MEDICIÓN -->
+        <button id="btnSalirMedicion" onclick="salirMedicionActiva()">
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          SALIR MEDICIÓN
+        </button>
+
+        <!-- Mapa Leaflet -->
         <div id="leafletMap"></div>
 
+        <!-- FAB Centrar posición (derecha abajo) -->
         <div class="map-fab-stack">
-          <button class="map-fab" onclick="centrarEnMiPosicion()" aria-label="Centrar en mi posición">
-            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="8"/></svg>
-          </button>
-          <button class="map-fab" id="btnStreetViewMap" onclick="abrirStreetViewMapa()" aria-label="Street View">
-            <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3"/><path d="M6 21c0-3.3 2.7-6 6-6s6 2.7 6 6"/></svg>
-          </button>
-          <button class="map-fab accent" onclick="abrirEnGoogleMapsDesdeMapa()" aria-label="Ir con GPS">
-            <svg viewBox="0 0 24 24"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg>
+          <button class="map-fab" onclick="centrarEnMiPosicion()" aria-label="Centrar en mi posición" title="Centrar en mi posición">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/><circle cx="12" cy="12" r="7"/></svg>
           </button>
         </div>
 
-        <button class="map-tools-toggle" onclick="abrirHerramientasMapa()">
-          <svg viewBox="0 0 24 24"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/></svg>
-          <span>Herramientas</span>
+        <!-- FAB Street View (izquierda, encima del panel) -->
+        <button id="btnStreetViewFab" onclick="abrirStreetViewMapa()" title="Street View">
+          <svg viewBox="0 0 24 36" width="26" height="38" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="12" cy="3.8" r="3" class="head" fill="var(--pk)"/>
+            <rect x="9" y="7.5" width="6" height="9" rx="2.5" fill="currentColor"/>
+            <rect x="4" y="8" width="4.5" height="2" rx="1" fill="currentColor"/>
+            <rect x="15.5" y="8" width="4.5" height="2" rx="1" fill="currentColor"/>
+            <rect x="9" y="16" width="2.5" height="10" rx="1.2" fill="currentColor" transform="rotate(5 9 16)"/>
+            <rect x="12.5" y="16" width="2.5" height="10" rx="1.2" fill="currentColor" transform="rotate(-5 14 16)"/>
+            <rect x="7.5" y="25" width="4" height="2" rx="1" fill="var(--pk)"/>
+            <rect x="12" y="25" width="4" height="2" rx="1" fill="var(--pk)"/>
+          </svg>
+          <span>Street</span>
         </button>
 
-        <div class="map-tools-sheet" id="mapToolsSheet">
-          <div class="map-tools-handle"></div>
-          <div class="map-tools-header">
-            <div class="map-tools-title">Herramientas del mapa</div>
-            <button class="map-tools-close" onclick="cerrarHerramientasMapa()" aria-label="Cerrar">
-              <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-            </button>
-          </div>
-          <div class="map-tools-body">
+        <!-- ── PANEL PK·MAPA DESLIZANTE DESDE ABAJO ── -->
+        <div id="pkMapaSheet" class="collapsed">
 
-            <div class="section-label">Capas</div>
+          <!-- Handle + peek (siempre visible) -->
+          <div class="pkm-sheet-handle" onclick="togglePkMapaSheet()"></div>
+          <div class="pkm-sheet-peek" onclick="togglePkMapaSheet()">
+            <div class="pkm-sheet-titlebar">
+              <div>
+                <div class="pkm-title">PK·MAPA</div>
+                <div class="pkm-sub">Localizador · Medición · Búsqueda</div>
+              </div>
+              <span class="pkm-chevron" id="pkMapaChevron">▲</span>
+            </div>
+            <!-- Card resultado — visible en el peek -->
+            <div class="pkm-res-card" id="pkmResCard">
+              <div class="pkm-res-idle" id="pkmResIdle">Mueve el pin o haz clic en el mapa</div>
+              <div id="pkmResData" style="display:none">
+                <div class="pkm-res-road" id="pkmResRoad">—</div>
+                <div class="pkm-res-pk" id="pkmResPK">—</div>
+                <div class="pkm-res-dist" id="pkmResDist"></div>
+                <div class="pkm-res-coords" id="pkmResCoords"></div>
+              </div>
+              <div id="pkmResWarn" style="display:none">
+                <div class="pkm-res-warn">⚠ Fuera de Carretera</div>
+                <div class="pkm-res-warn-sub" id="pkmResWarnSub"></div>
+              </div>
+            </div>
+            <!-- Acciones rápidas (copiar, WA, Maps) -->
+            <div class="pkm-actions" id="pkmActions" style="display:none">
+              <button class="pkm-action-btn" style="color:#EA4335;border-color:rgba(234,67,53,.35);background:rgba(234,67,53,.08)" onclick="pkmAbrirMaps()">
+                <svg viewBox="0 0 24 24" width="13" height="13" fill="#EA4335"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg>Maps
+              </button>
+              <button class="pkm-action-btn" style="color:#25d366;border-color:rgba(37,211,102,.35);background:rgba(37,211,102,.08)" onclick="pkmCompartirWA()">💬 WA</button>
+              <button class="pkm-action-btn" style="color:var(--pk);border-color:var(--pk-bd);background:var(--pk-dim)" onclick="pkmCopiar()">📋 Copiar</button>
+            </div>
+          </div>
+
+          <!-- Body expandido (scroll) -->
+          <div class="pkm-body">
+
+            <!-- IR A PK EXACTO -->
+            <div class="pkm-sec-label">Vés a PK Exacte</div>
+            <div class="pkm-pk-row">
+              <input class="pkm-inp road" id="pkmLkCarr" type="text" placeholder="Carr." maxlength="10" oninput="this.value=this.value.toUpperCase()">
+              <input class="pkm-inp km" id="pkmLkKm" type="number" placeholder="KM" min="0" max="9999">
+              <span class="pkm-sep">+</span>
+              <input class="pkm-inp m-inp" id="pkmLkM" type="number" placeholder="m" min="0" max="999">
+              <button class="pkm-go-btn" onclick="pkmAnarAPK()" title="Ir a PK">›</button>
+            </div>
+
+            <!-- COORDENADAS -->
+            <div class="pkm-sec-label">Introdueix Coordenades</div>
+            <div class="pkm-accord" id="pkmCoordAccord">
+              <div class="pkm-accord-head" onclick="togglePkmCoordAccord()">
+                <span class="pkm-accord-lbl">📍 Enganxa des de Google Maps</span>
+                <span class="pkm-accord-arr" id="pkmCoordArr">▼</span>
+              </div>
+              <div class="pkm-accord-body" id="pkmCoordBody">
+                <input class="pkm-coord-inp" id="pkmCoordLat" type="number" placeholder="Latitud (41.6xxx)" step="any">
+                <input class="pkm-coord-inp" id="pkmCoordLon" type="number" placeholder="Longitud (1.2xxx)" step="any">
+                <button class="btn-secondary" style="width:100%" onclick="pkmAnarACoords()">→ IR A ESTAS COORDENADAS</button>
+              </div>
+            </div>
+
+            <!-- MEDICIÓN DISTANCIA -->
+            <div class="pkm-sec-label">Mesurament de Distància</div>
+            <div class="pkm-amid-head" onclick="toggleMedirDistancia()">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--purple);flex-shrink:0"><line x1="5" y1="19" x2="19" y2="5"/><circle cx="6.5" cy="17.5" r="2.5"/><circle cx="17.5" cy="6.5" r="2.5"/></svg>
+              <span style="font-size:.78rem;font-weight:600;color:var(--t2)">Mesura distància</span>
+              <button class="pkm-amid-toggle" id="pkmDistToggle">Activar</button>
+            </div>
+            <div id="pkmDistBody" style="display:none;margin-top:6px">
+              <div class="map-measure-result show" id="distResult">
+                <div class="map-measure-result-header">
+                  <div class="map-measure-result-title">Distancia</div>
+                  <button class="map-measure-close" onclick="cerrarMedicionDistancia()" aria-label="Cerrar">
+                    <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  </button>
+                </div>
+                <div class="map-measure-value" id="distValue">—</div>
+                <div class="map-measure-line" id="distSub">Sin puntos marcados</div>
+                <div class="map-measure-line" id="distDetail"></div>
+              </div>
+              <div class="map-pts-list" id="distPtsList"></div>
+            </div>
+
+            <!-- MEDICIÓN ÁREA -->
+            <div class="pkm-sec-label">Mesurament de Superfície / Àrea</div>
+            <div class="pkm-amid-head" onclick="toggleMedirArea()">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--purple);flex-shrink:0"><polygon points="3,20 10,4 21,17"/></svg>
+              <span style="font-size:.78rem;font-weight:600;color:var(--t2)">Mesura superfície</span>
+              <button class="pkm-amid-toggle" id="pkmAreaToggle">Activar</button>
+            </div>
+            <div id="pkmAreaBody" style="display:none;margin-top:6px">
+              <div class="map-measure-result show" id="areaResult">
+                <div class="map-measure-result-header">
+                  <div class="map-measure-result-title">Superfície</div>
+                  <button class="map-measure-close" onclick="cerrarMedicionArea()" aria-label="Cerrar">
+                    <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  </button>
+                </div>
+                <div class="map-measure-value" id="areaValue">—</div>
+                <div class="map-measure-line" id="areaSub">Sin vértices</div>
+              </div>
+              <div class="map-pts-list" id="areaPtsList"></div>
+              <button class="btn-secondary" style="width:100%;margin-top:6px;display:none" id="btnCerrarPoligono" onclick="cerrarPoligonoArea()">
+                <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+                Cerrar polígono y calcular
+              </button>
+            </div>
+
+            <!-- LISTA NEGRA -->
+            <div class="pkm-sec-label">Lista Negra de Carreteras</div>
+            <div style="background:var(--bg-2);border:1px solid var(--border);border-radius:var(--r-sm);overflow:hidden">
+              <div class="pkm-ln-head" onclick="togglePkmListaNegra()">
+                <span style="font-size:.85rem">🚫</span>
+                <span style="font-size:.78rem;font-weight:600;color:var(--t2);flex:1">Lista Negra</span>
+                <span style="font-size:.65rem;color:var(--t3)" id="pkmLnArrow">▼</span>
+              </div>
+              <div id="pkmLnBody" style="display:none;padding:0 13px 12px">
+                <div class="pkm-ln-tags" id="pkmLnTags"></div>
+                <div class="pkm-ln-add-row">
+                  <input class="pkm-ln-inp" id="pkmLnInp" type="text" placeholder="Ej: A-2" maxlength="12"
+                    oninput="this.value=this.value.toUpperCase()"
+                    onkeydown="if(event.key==='Enter')pkmLnAfegir()">
+                  <button class="pkm-ln-add-btn" onclick="pkmLnAfegir()">+ Añadir</button>
+                </div>
+                <button style="background:none;border:none;color:var(--t3);font-size:.7rem;margin-top:8px;cursor:pointer" onclick="pkmLnReset()">↺ Restaurar por defecto</button>
+              </div>
+            </div>
+
+            <!-- HERRAMIENTAS ADICIONALES -->
+            <div class="pkm-sec-label" style="margin-top:16px">Capas y Herramientas</div>
             <div class="map-tool-row">
               <div class="map-tool-icon" style="background:var(--pk-dim);color:var(--pk)">
-                <svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="1.5"/><circle cx="12" cy="6" r="1.5"/><circle cx="18" cy="6" r="1.5"/><circle cx="6" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="18" cy="12" r="1.5"/><circle cx="6" cy="18" r="1.5"/><circle cx="12" cy="18" r="1.5"/><circle cx="18" cy="18" r="1.5"/></svg>
+                <svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="1.5"/><circle cx="12" cy="6" r="1.5"/><circle cx="18" cy="6" r="1.5"/><circle cx="6" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="18" cy="12" r="1.5"/></svg>
               </div>
               <div class="map-tool-text">
                 <div class="map-tool-name">Puntos PK guía</div>
-                <div class="map-tool-sub">Marca el seed oficial sobre el mapa</div>
+                <div class="map-tool-sub">Seed oficial sobre el mapa (zoom ≥12)</div>
               </div>
               <button class="map-tool-switch" id="switchPuntosPK" onclick="togglePuntosPKMapa()"></button>
             </div>
 
-            <div class="section-label">Ir a PK exacto</div>
-            <div class="map-goto-row">
-              <input class="field-input" id="mapGotoCarretera" placeholder="C-14" style="text-transform:uppercase">
-              <input class="field-input small" id="mapGotoKm" type="number" placeholder="Km">
-              <input class="field-input small" id="mapGotoM" type="number" placeholder="m">
-            </div>
-            <button class="btn-secondary" style="width:100%;margin-bottom:16px" onclick="irAPkExactoMapa()">
-              <svg viewBox="0 0 24 24"><path d="M12 21s-7-6.5-7-12a7 7 0 0 1 14 0c0 5.5-7 12-7 12Z"/><circle cx="12" cy="9" r="2.5"/></svg>
-              Ir a este PK
-            </button>
-
-            <div class="section-label">Mediciones</div>
-
-            <div class="map-tool-row">
-              <div class="map-tool-icon" style="background:var(--purple-dim);color:var(--purple)">
-                <svg viewBox="0 0 24 24"><line x1="5" y1="19" x2="19" y2="5"/><circle cx="6.5" cy="17.5" r="2.5"/><circle cx="17.5" cy="6.5" r="2.5"/></svg>
-              </div>
-              <div class="map-tool-text">
-                <div class="map-tool-name">Medir distancia</div>
-                <div class="map-tool-sub">Toca 2 puntos en el mapa</div>
-              </div>
-              <button class="map-tool-switch" id="switchMedirDist" onclick="toggleMedirDistancia()"></button>
-            </div>
-
-            <div class="map-measure-result" id="distResult">
-              <div class="map-measure-result-header">
-                <div class="map-measure-result-title">Distancia</div>
-                <button class="map-measure-close" onclick="cerrarMedicionDistancia()" aria-label="Cerrar">
-                  <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                </button>
-              </div>
-              <div class="map-measure-value" id="distValue">—</div>
-              <div class="map-measure-line" id="distSub">Sin puntos marcados</div>
-              <div class="map-measure-line" id="distDetail"></div>
-            </div>
-            <div class="map-pts-list" id="distPtsList"></div>
-
-            <div class="map-tool-row" style="margin-top:8px">
-              <div class="map-tool-icon" style="background:var(--purple-dim);color:var(--purple)">
-                <svg viewBox="0 0 24 24"><polygon points="6 3 21 8 19 21 3 17"/></svg>
-              </div>
-              <div class="map-tool-text">
-                <div class="map-tool-name">Medir superficie</div>
-                <div class="map-tool-sub">Toca puntos para formar el polígono</div>
-              </div>
-              <button class="map-tool-switch" id="switchMedirArea" onclick="toggleMedirArea()"></button>
-            </div>
-
-            <div class="map-measure-result" id="areaResult">
-              <div class="map-measure-result-header">
-                <div class="map-measure-result-title">Superficie</div>
-                <button class="map-measure-close" onclick="cerrarMedicionArea()" aria-label="Cerrar">
-                  <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                </button>
-              </div>
-              <div class="map-measure-value" id="areaValue">—</div>
-              <div class="map-measure-line" id="areaSub">Sin vértices marcados</div>
-            </div>
-            <div class="map-pts-list" id="areaPtsList"></div>
-            <button class="btn-secondary" style="width:100%;margin-top:8px;display:none" id="btnCerrarPoligono" onclick="cerrarPoligonoArea()">
-              <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
-              Cerrar polígono y calcular
-            </button>
-
-            <div class="section-label" style="margin-top:16px">Mapa offline</div>
+            <!-- MAPA OFFLINE -->
+            <div class="pkm-sec-label" style="margin-top:14px">Mapa Offline</div>
             <div class="map-tool-row">
               <div class="map-tool-icon" style="background:var(--pk-dim);color:var(--pk)">
                 <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
               </div>
               <div class="map-tool-text">
                 <div class="map-tool-name">Descargar zona visible</div>
-                <div class="map-tool-sub" id="tileDescargaSub">Guarda el mapa actual para usarlo sin red</div>
+                <div class="map-tool-sub" id="tileDescargaSub">Guarda el mapa para usar sin red</div>
               </div>
             </div>
             <button class="btn-secondary" style="width:100%;margin-bottom:6px" id="btnDescargarTiles" onclick="descargarTilesZonaVisible()">
               <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
               Descargar zona visible
             </button>
-            <button class="btn-secondary btn-danger" style="width:100%" onclick="borrarTilesDescargados()">
+            <button class="btn-secondary" style="width:100%;border-color:rgba(255,90,110,.35);color:var(--red)" onclick="borrarTilesDescargados()">
               <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
               Borrar tiles descargados
             </button>
 
-          </div>
-        </div>
+            <!-- MAPEO DE CARRETERAS -->
+            <div class="pkm-sec-label" style="margin-top:14px">Mapeo de Carreteras</div>
+            <button class="btn-secondary" style="width:100%" onclick="cerrarPkMapaSheet();mostrarPantalla('screenMapeo');renderizarPanelMapeo()">
+              <svg viewBox="0 0 24 24"><path d="M12 21s-7-6.5-7-12a7 7 0 0 1 14 0c0 5.5-7 12-7 12Z"/><circle cx="12" cy="9" r="2.5"/></svg>
+              Ir al módulo de mapeo
+            </button>
 
-      </div>
+          </div><!-- /pkm-body -->
+        </div><!-- /pkMapaSheet -->
+
+      </div><!-- /map-wrap -->
     </div>
 
     <div class="screen" id="screenInformes">
@@ -2081,6 +2750,42 @@ input,select,textarea{font-family:inherit}
       </button>
       <div style="height:8px"></div>
 
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalCapObraDetall" onclick="cerrarModalSiOverlay(event,'modalCapObraDetall')">
+  <div class="modal-sheet" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <div class="modal-title" style="color:var(--cat-obra)">📋 Nova Obra</div>
+      <button class="modal-close" onclick="cerrarModal('modalCapObraDetall')" aria-label="Cerrar">
+        <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="field-group">
+        <div class="field-label">Nom de l'Obra</div>
+        <input class="field-input" id="capObraModalNom" placeholder="Ex: Millora C-55 Km 12-18">
+      </div>
+      <div class="obra-dates-row">
+        <div class="field-group">
+          <div class="field-label">Data Inici</div>
+          <input class="field-input" type="date" id="capObraModalInici">
+        </div>
+        <div class="field-group">
+          <div class="field-label">Data Fi Estimada</div>
+          <input class="field-input" type="date" id="capObraModalFi">
+        </div>
+      </div>
+      <div class="field-group">
+        <div class="field-label">Progrés Inicial (%)</div>
+        <input class="field-input" type="number" id="capObraModalProgres" min="0" max="100" value="0" placeholder="0">
+      </div>
+      <button class="btn-main" style="background:var(--cat-obra);border-color:var(--cat-obra)" onclick="capConfirmarObraModal()">
+        CREAR OBRA ✓
+      </button>
+      <div style="height:8px"></div>
     </div>
   </div>
 </div>
@@ -2927,11 +3632,24 @@ async function actualizarStatsDashboard() {
 function irAModulo(nombre) {
   const mapaScreens = {
     incidencias: 'screenIncidencias',
-    captura: 'screenCaptura',
+    inventarios: 'screenInventarios',
     mapa: 'screenMapa',
     informes: 'screenInformes',
     odometro: 'screenInformes'
   };
+  const screenId = mapaScreens[nombre];
+  if (!screenId) return;
+  mostrarPantalla(screenId);
+
+  if (nombre === 'incidencias') renderizarListaIncidencias();
+  if (nombre === 'inventarios') { capAnarHome(); capRenderRecents(); }
+  if (nombre === 'mapa') inicializarMapa();
+  if (nombre === 'informes') renderizarHistorial();
+  if (nombre === 'odometro') {
+    const btn = document.querySelector('#screenInformes .subtab[data-sub="odometro"]');
+    if (btn) cambiarSubtabInformes(btn, 'odometro');
+  }
+};
   const screenId = mapaScreens[nombre];
   if (!screenId) return;
   mostrarPantalla(screenId);
@@ -3292,484 +4010,776 @@ function cerrarModalSiOverlay(event, id) {
 /* ──────────────────────────────────────────────────────────
    MÓDULO CAPTURA — Foto rápida / Obra / Inventario
    ────────────────────────────────────────────────────────── */
+/* ══════════════════════════════════════════════════════════
+   MÓDULO CAPTURA — Sistema complet fidel a DATACAMP
+   4 vistes: Home (Foto/Projectes) · Configurador · Formulari · Punts Llistat
+   3 tipus de projecte: Inventari · Obra · Personalitzat
+   ══════════════════════════════════════════════════════════ */
+
+/* ── Estat global del mòdul ── */
 let _capSubActiva = 'foto';
 let _frFotoDataUrl = null;
+let _capCurrentView = 'home';
+let _capCurId = null;
+let _capRegs = [];
+let _capFields = [];
+let _capTmpFotos = [];
+let _capEditIdx = -1;
+let _capTipus = 'inventari';
+let _capAutopkRunning = false;
+
+/* ── Navegació entre sub-vistes ── */
+function capMostrarVista(id) {
+  document.querySelectorAll('.cap-view').forEach(v => v.classList.remove('active'));
+  const el = document.getElementById(id);
+  if (el) el.classList.add('active');
+  _capCurrentView = id;
+}
+
+function capAnarHome() {
+  document.getElementById('capHeaderTitle').textContent = 'Inventarios';
+  document.getElementById('capBackBtn').onclick = volverAlDashboard;
+  capMostrarVista('capHome');
+  capRenderRecents();
+}
+
+/* Alias de pestaña Inventarios — acceso a tabs desde dashboard */
+function invAbrirTab(tab) {
+  // Por defecto no hace nada especial; la Home del módulo ya muestra las pestañas
+}
+
+function capAnarForm() {
+  document.getElementById('capHeaderTitle').textContent = _capTipus === 'obra' ? '📋 Formulari Obra' : '📝 Formulari';
+  document.getElementById('capBackBtn').onclick = () => capAnarPuntsLlistat();
+  capRenderForm();
+  capRenderPreview();
+  capUpdateRegCount();
+  capMostrarVista('capForm');
+}
+
+function capAnarPuntsLlistat() {
+  document.getElementById('capHeaderTitle').textContent = '📍 Punts Recollits';
+  document.getElementById('capBackBtn').onclick = () => capAnarForm();
+  capRenderRegs();
+  capMostrarVista('capPuntsLlistat');
+}
+
+function capAnarConfig() {
+  document.getElementById('capHeaderTitle').textContent = '🛠️ Disseny del formulari';
+  document.getElementById('capBackBtn').onclick = () => capAnarHome();
+  capRenderConfig();
+  capMostrarVista('capConfig');
+}
+
+function capBackBtn() { volverAlDashboard(); }
+
+/* ── Subtabs (Foto / Projectes) ── */
+/* ── Navegació pestanyes Inventarios ── */
+function invCambiarTab(btn, sub) {
+  if (!btn) return;
+  document.querySelectorAll('#invTabBar .subtab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const panels = { nuevo: 'subNuevoInv', historial: 'subHistorial', descargas: 'subDescargas' };
+  document.querySelectorAll('#capHome .subpanel').forEach(p => p.classList.remove('active'));
+  const target = document.getElementById(panels[sub]);
+  if (target) target.classList.add('active');
+  if (sub === 'historial') invRenderHistorial();
+}
+
+function invRenderHistorial() {
+  const container = document.getElementById('histInvList');
+  if (!container) return;
+  // Render de projectes existents amb drag-and-drop (Sortable.js)
+  capRenderRecents(container);
+}
+
+function capExportarPDF() {
+  exportarInformePDF({ titulo: 'INVENTARI', incluirFotos: true });
+}
+
+async function capExportarExcel() {
+  if (typeof XLSX === 'undefined') { showToast('⚠️ XLSX no disponible'); return; }
+  const projectes = await idbGetAll(STORES.PROJECTS);
+  const filas = [];
+  projectes.forEach(p => {
+    (p.registros || p.regs || []).forEach((r, i) => {
+      const fila = { Projecte: p.titulo || '—', Index: i + 1 };
+      (p.fields || []).forEach(f => { fila[f.label || f.type] = r[f.id] || ''; });
+      if (r.carretera) fila['Carretera'] = r.carretera;
+      if (r.pk !== undefined) fila['PK'] = r.pk;
+      if (r.marge) fila['Marge'] = r.marge;
+      filas.push(fila);
+    });
+  });
+  if (!filas.length) { showToast('⚠️ No hay datos para exportar'); return; }
+  const ws = XLSX.utils.json_to_sheet(filas);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Inventari');
+  XLSX.writeFile(wb, `SDV_Inventari_${new Date().toISOString().slice(0,10)}.xlsx`);
+  showToast('✅ Excel exportado');
+}
+
+async function capExportarZIPFotos() {
+  if (typeof JSZip === 'undefined') { showToast('⚠️ JSZip no disponible'); return; }
+  const projectes = await idbGetAll(STORES.PROJECTS);
+  const zip = new JSZip();
+  let count = 0;
+  for (const p of projectes) {
+    const regs = p.registros || p.regs || [];
+    for (let i = 0; i < regs.length; i++) {
+      const r = regs[i];
+      if (!r.fotos || !r.fotos.length) continue;
+      for (let j = 0; j < r.fotos.length; j++) {
+        const foto = r.fotos[j];
+        if (!foto.dataUrl) continue;
+        const ctra = (r.carretera || p.titulo || 'SIN_CTRA').replace(/[^a-zA-Z0-9-]/g,'_');
+        const pk = r.pk !== undefined ? String(r.pk).replace('.','p') : 'SINPK';
+        const marge = (r.marge || 'SINM').replace(/[^a-zA-Z0-9]/g,'_');
+        const nomFitxer = `${ctra}_PK${pk}_${marge}_${i+1}_${j+1}.jpg`;
+        const base64 = foto.dataUrl.split(',')[1];
+        if (base64) zip.file(nomFitxer, base64, { base64: true });
+        count++;
+      }
+    }
+  }
+  if (!count) { showToast('⚠️ No hay fotos para exportar'); return; }
+  const blob = await zip.generateAsync({ type: 'blob' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `SDV_Fotos_${new Date().toISOString().slice(0,10)}.zip`;
+  a.click(); URL.revokeObjectURL(url);
+  showToast(`✅ ZIP generado · ${count} fotos`);
+}
 
 function cambiarSubtabCaptura(btn, sub) {
-  document.querySelectorAll('.subtab').forEach(b => b.classList.remove('active'));
-  document.querySelectorAll('.subpanel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('#capHome .subtab').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('#capHome .subpanel').forEach(p => p.classList.remove('active'));
   btn.classList.add('active');
-  document.getElementById('sub' + sub.charAt(0).toUpperCase() + sub.slice(1)).classList.add('active');
+  document.getElementById(sub === 'foto' ? 'subFoto' : 'subProjectes').classList.add('active');
   _capSubActiva = sub;
+  if (sub === 'foto') renderizarFotosRecientes();
+  if (sub === 'projectes') capRenderRecents();
+}
 
-  const fab = document.getElementById('capFab');
-  if (sub === 'foto') {
-    fab.style.display = 'none';
-    renderizarFotosRecientes();
-  } else if (sub === 'obra') {
-    fab.style.display = 'flex';
-    fab.style.background = 'var(--accent)';
-    renderizarListaObras();
-  } else if (sub === 'inventario') {
-    fab.style.display = 'flex';
-    fab.style.background = 'var(--purple)';
-    renderizarListaInventario();
+/* ── Crear projecte ── */
+function capCrearProjecte(tipus) {
+  _capTipus = tipus;
+  _capCurId = 'p_' + Date.now();
+  _capRegs = [];
+  _capTmpFotos = [];
+  _capEditIdx = -1;
+
+  if (tipus === 'inventari') {
+    _capFields = [
+      { type: 'carretera', label: 'Carretera' },
+      { type: 'pk',        label: 'PK' },
+      { type: 'marge',     label: 'Marge' },
+      { type: 'obs',       label: 'Observacions' }
+    ];
+    document.getElementById('capTitol').value = '';
+    document.getElementById('capObraDetall').style.display = 'none';
+    capAnarForm();
+
+  } else if (tipus === 'obra') {
+    const avui = new Date().toISOString().slice(0, 10);
+    document.getElementById('capObraModalInici').value = avui;
+    document.getElementById('capObraModalFi').value = '';
+    document.getElementById('capObraModalNom').value = '';
+    document.getElementById('capObraModalProgres').value = '0';
+    abrirModal('modalCapObraDetall');
+
+  } else if (tipus === 'personalitzat') {
+    _capFields = [];
+    document.getElementById('capTitol').value = '';
+    capAnarConfig();
   }
 }
 
-function accionFabCaptura() {
-  if (_capSubActiva === 'obra') abrirModalObra();
-  else if (_capSubActiva === 'inventario') abrirModalInventario();
+function capConfirmarObraModal() {
+  const nom = document.getElementById('capObraModalNom').value.trim();
+  const inici = document.getElementById('capObraModalInici').value;
+  if (!nom) { showToast('⚠️ Cal posar el nom de l\'obra'); return; }
+  if (!inici) { showToast('⚠️ Cal posar la data d\'inici'); return; }
+
+  _capFields = [
+    { type: 'carretera', label: 'Carretera' },
+    { type: 'pk',        label: 'PK' },
+    { type: 'marge',     label: 'Marge' },
+    { type: 'obs',       label: 'Observacions' }
+  ];
+
+  cerrarModal('modalCapObraDetall');
+  document.getElementById('capTitol').value = nom;
+  document.getElementById('capObraDetall').style.display = 'block';
+  document.getElementById('capObraInici').value = inici;
+  document.getElementById('capObraFi').value = document.getElementById('capObraModalFi').value;
+  document.getElementById('capObraProgres').value = document.getElementById('capObraModalProgres').value;
+  capAnarForm();
 }
 
-/* ── Foto rápida ── */
-function tomarFotoRapida() {
-  const input = document.createElement('input');
-  input.type = 'file';
-  input.accept = 'image/*';
-  input.capture = 'environment';
-  input.onchange = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      _frFotoDataUrl = ev.target.result;
-      const preview = document.getElementById('frPreview');
-      const pkTexto = GPS.pk
-        ? `${GPS.pk.carretera || CTX.carretera} · PK ${Number(GPS.pk.pk).toFixed(3)}`
-        : (GPS.pos ? `${GPS.pos.lat.toFixed(4)}°N, ${GPS.pos.lng.toFixed(4)}°E` : 'Sin GPS');
-      preview.innerHTML = `
-        <img src="${_frFotoDataUrl}" alt="Foto capturada">
-        <div class="fr-pk-overlay">
-          <svg viewBox="0 0 24 24"><path d="M12 21s-7-6.5-7-12a7 7 0 0 1 14 0c0 5.5-7 12-7 12Z"/><circle cx="12" cy="9" r="2.5"/></svg>
-          <div class="fr-pk-overlay-text">${pkTexto}</div>
-        </div>`;
-      document.getElementById('btnGuardarFotoRapida').disabled = false;
-    };
-    reader.readAsDataURL(file);
-  };
-  input.click();
-  if (!GPS.pos) GPS.start();
+/* ── Configurador de camps personalitzats ── */
+function capAddField(type, label) {
+  const nom = label || prompt('Nom del camp:');
+  if (!nom) return;
+  _capFields.push({ type, label: nom });
+  capRenderConfig();
 }
 
-async function guardarFotoRapida() {
-  if (!_frFotoDataUrl) return;
-  try {
-    await idbPut(STORES.FOTOS, {
-      dataUrl: _frFotoDataUrl,
-      carretera: GPS.pk?.carretera || CTX.carretera || '',
-      pk: GPS.pk?.pk ?? null,
-      lat: GPS.pos?.lat ?? null,
-      lng: GPS.pos?.lng ?? null,
-      ts: new Date().toISOString()
+function capRenderConfig() {
+  const l = document.getElementById('capFieldList');
+  if (!l) return;
+  if (_capFields.length === 0) {
+    l.innerHTML = '<p style="color:var(--t3);text-align:center;padding:12px;font-size:.82rem">Formulari buit — afegeix camps</p>';
+    return;
+  }
+  l.innerHTML = _capFields.map((f, i) => `
+    <div class="field-tag">
+      <span><b>${f.type.toUpperCase()}</b> — ${f.label}</span>
+      <button class="btn-secondary" style="padding:3px 9px;font-size:.7rem;color:var(--red);border-color:var(--red)" onclick="_capFields.splice(${i},1);capRenderConfig()">✕</button>
+    </div>`).join('');
+}
+
+function capFinalitzarConfig() {
+  if (_capFields.length === 0) { showToast('⚠️ Afegeix algun camp primer'); return; }
+  capAnarForm();
+}
+
+/* ── Renderizar formulari de dades ── */
+function capRenderForm() {
+  const cont = document.getElementById('capDynamicFields');
+  if (!cont) return;
+  cont.innerHTML = _capFields.map((f, i) => {
+    if (f.type === 'carretera') return `<div class="dyn-field"><label>${f.label}</label><input type="text" class="cap-dyn-input" data-idx="${i}" style="width:100%;background:var(--bg-3);border:1px solid var(--border-2);border-radius:var(--r-sm);padding:10px 12px;font-size:.88rem;color:var(--t1)"></div>`;
+    if (f.type === 'pk') return `<div class="dyn-field"><label>${f.label}</label><div class="pk-row"><input type="number" class="cap-pk-km" data-idx="${i}" placeholder="Km" style="flex:1;background:var(--bg-3);border:1px solid var(--border-2);border-radius:var(--r-sm);padding:10px 12px;font-size:.88rem;color:var(--t1)"><b style="color:var(--t3)">+</b><input type="number" class="cap-pk-m" data-idx="${i}" placeholder="m" style="flex:1;background:var(--bg-3);border:1px solid var(--border-2);border-radius:var(--r-sm);padding:10px 12px;font-size:.88rem;color:var(--t1)" onblur="if(this.value!='')this.value=String(this.value).padStart(3,'0')"></div></div>`;
+    if (f.type === 'marge') return `<div class="dyn-field"><label>${f.label}</label><select class="cap-dyn-marge" data-idx="${i}" style="width:100%;background:var(--bg-3);border:1px solid var(--border-2);border-radius:var(--r-sm);padding:10px 12px;font-size:.88rem;color:var(--t1)"><option>MD</option><option>ME</option><option>Eix</option></select></div>`;
+    if (f.type === 'obs' || f.type === 'text') return `<div class="dyn-field"><label>${f.label}</label><textarea class="cap-dyn-input cap-dyn-obs" data-idx="${i}" rows="2" style="width:100%;background:var(--bg-3);border:1px solid var(--border-2);border-radius:var(--r-sm);padding:10px 12px;font-size:.88rem;color:var(--t1);resize:vertical"></textarea></div>`;
+    if (f.type === 'custom') return `<div class="dyn-field custom-field-group" style="padding:10px;border-radius:var(--r-sm)"><label style="display:flex;align-items:center;justify-content:space-between">${f.label}<button style="font-size:.68rem;padding:2px 6px;border:1px solid var(--border-2);border-radius:4px;background:transparent;color:var(--t3)" onclick="capEliminarCampCustom(${i})">✕ treure</button></label><input type="text" class="cap-dyn-input cap-dyn-custom" data-idx="${i}" style="width:100%;background:var(--bg-2);border:1px solid var(--border-2);border-radius:var(--r-sm);padding:10px 12px;font-size:.88rem;color:var(--t1)"></div>`;
+    return '';
+  }).join('');
+}
+
+/* ── Camp personalitzat inline ── */
+function capObrirCampCustom() {
+  document.getElementById('capCampCustomForm').style.display = 'block';
+  document.getElementById('btnCapAfegirCamp').style.display = 'none';
+  document.getElementById('capCampNomInput').value = '';
+  document.getElementById('capCampNomInput').focus();
+}
+
+function capTancarCampCustom() {
+  document.getElementById('capCampCustomForm').style.display = 'none';
+  document.getElementById('btnCapAfegirCamp').style.display = '';
+}
+
+function capConfirmarCampCustom() {
+  const nom = document.getElementById('capCampNomInput').value.trim();
+  if (!nom) { showToast('⚠️ Cal posar un nom al camp'); return; }
+  if (_capFields.some(f => f.label.toLowerCase() === nom.toLowerCase())) {
+    showToast(`⚠️ Ja existeix un camp "${nom}"`); return;
+  }
+  _capFields.push({ type: 'custom', label: nom });
+  _capRegs.forEach(r => {
+    if (r.isAnnex) return;
+    if (!r.values.some(v => v.label.toLowerCase() === nom.toLowerCase())) r.values.push({ label: nom, val: '' });
+  });
+  capTancarCampCustom();
+  capRenderForm();
+  capGuardarProjecteDB();
+  showToast(`✏️ Camp "${nom}" afegit`);
+  setTimeout(() => {
+    const idx = _capFields.length - 1;
+    const el = document.querySelector(`.cap-dyn-input[data-idx="${idx}"]`);
+    if (el) el.focus();
+  }, 80);
+}
+
+function capEliminarCampCustom(idx) {
+  const f = _capFields[idx];
+  if (!f || !confirm(`Treure el camp "${f.label}"?`)) return;
+  const nom = f.label;
+  _capFields.splice(idx, 1);
+  _capRegs.forEach(r => {
+    if (!r.isAnnex) r.values = r.values.filter(v => v.label.toLowerCase() !== nom.toLowerCase());
+  });
+  capRenderForm();
+  capGuardarProjecteDB();
+  showToast(`🗑️ Camp "${nom}" eliminat`);
+}
+
+/* ── Auto-PK ── */
+async function capExecutarAutoPK() {
+  if (_capAutopkRunning) return;
+  const teCamps = _capFields.some(f => f.type === 'carretera' || f.type === 'pk');
+  if (!teCamps) { showToast('⚠️ El formulari no té camps Carretera/PK'); return; }
+  if (!navigator.geolocation) { capSetAutopkEstat('err', '🚫', 'GPS no disponible'); return; }
+
+  _capAutopkRunning = true;
+  capSetAutopkEstat('', '📡', 'Adquirint senyal GPS...');
+
+  navigator.geolocation.getCurrentPosition(async (pos) => {
+    const { latitude: lat, longitude: lng, accuracy: acc } = pos.coords;
+    capSetAutopkEstat('', '🗺️', `GPS OK (±${Math.round(acc)}m) — Cercant carretera...`);
+
+    const resultat = await obtenerPKActual(lat, lng);
+    _capAutopkRunning = false;
+
+    if (resultat) {
+      const mStr = String(resultat.m).padStart(3, '0');
+      capSetAutopkEstat('ok', '✅', `${resultat.carretera} · PK ${resultat.km}+${mStr} · ±${Math.round(acc)}m`);
+
+      const iCar = _capFields.findIndex(f => f.type === 'carretera');
+      const iPk  = _capFields.findIndex(f => f.type === 'pk');
+      if (iCar >= 0) {
+        const el = document.querySelector(`.cap-dyn-input[data-idx="${iCar}"]`);
+        if (el) el.value = resultat.carretera;
+      }
+      if (iPk >= 0) {
+        const elKm = document.querySelector(`.cap-pk-km[data-idx="${iPk}"]`);
+        const elM  = document.querySelector(`.cap-pk-m[data-idx="${iPk}"]`);
+        if (elKm) elKm.value = resultat.km;
+        if (elM)  elM.value  = mStr;
+      }
+    } else {
+      capSetAutopkEstat('warn', '🏙️', 'Cap carretera trobada a prop. Introdueix manualment.');
+    }
+  }, (err) => {
+    _capAutopkRunning = false;
+    capSetAutopkEstat('err', '⚠️', 'Error GPS: ' + (err.message || 'desconegut'));
+  }, { enableHighAccuracy: true, timeout: 20000, maximumAge: 5000 });
+}
+
+function capSetAutopkEstat(cls, icon, text) {
+  const el = document.getElementById('capAutopkStatus');
+  if (!el) return;
+  el.className = 'autopk-status' + (cls ? ' ' + cls : '');
+  document.getElementById('capAutopkIcon').textContent = icon;
+  document.getElementById('capAutopkText').textContent = text;
+}
+
+/* ── Fotos del formulari ── */
+async function capHandleFotos(input) {
+  for (const file of Array.from(input.files)) {
+    const b64 = await new Promise(res => {
+      const reader = new FileReader();
+      reader.onload = e => {
+        const img = new Image();
+        img.onload = () => {
+          const cvs = document.createElement('canvas');
+          const max = 1200;
+          let w = img.width, h = img.height;
+          if (w > max) { h *= max / w; w = max; }
+          cvs.width = w; cvs.height = h;
+          cvs.getContext('2d').drawImage(img, 0, 0, w, h);
+          res(cvs.toDataURL('image/jpeg', 0.82));
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
     });
-    showToast('✅ Foto guardada en historial');
-    _frFotoDataUrl = null;
-    document.getElementById('btnGuardarFotoRapida').disabled = true;
-    document.getElementById('frPreview').innerHTML = `
-      <svg class="fr-preview-icon" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2Z"/><circle cx="12" cy="13" r="4"/></svg>
-      <div class="fr-preview-text">Toca para hacer una foto</div>`;
-    await renderizarFotosRecientes();
-    await actualizarStatsDashboard();
-  } catch (e) {
-    console.error('[CAPTURA] Error guardando foto:', e);
-    showToast('❌ Error al guardar la foto');
+    _capTmpFotos.push(b64);
   }
+  capRenderPreview();
+  input.value = '';
 }
 
-async function renderizarFotosRecientes() {
-  const container = document.getElementById('frRecentList');
-  if (!container) return;
-  let fotos = await idbGetAll(STORES.FOTOS);
-  fotos.sort((a, b) => (b.ts || '').localeCompare(a.ts || ''));
-  fotos = fotos.slice(0, 6);
+function capRenderPreview() {
+  const preview = document.getElementById('capFotoPreview');
+  if (!preview) return;
+  preview.innerHTML = _capTmpFotos.map((f, i) => `
+    <div class="foto-item">
+      <img src="${f}" alt="">
+      <button class="foto-del" onclick="capEliminarFoto(${i})">✕</button>
+    </div>`).join('');
+}
 
-  if (fotos.length === 0) {
-    container.innerHTML = `<div class="inc-empty" style="padding:24px 10px">
-      <div class="inc-empty-text">Sin fotos recientes</div>
+function capEliminarFoto(i) {
+  _capTmpFotos.splice(i, 1);
+  capRenderPreview();
+}
+
+function aplicarMarcaAigua(base64, text) {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+      const hBarra = canvas.height * 0.055;
+      ctx.fillStyle = 'rgba(0,0,0,0.55)';
+      ctx.fillRect(0, canvas.height - hBarra, canvas.width, hBarra);
+      ctx.fillStyle = '#fff';
+      const fontSize = Math.round(hBarra * 0.58);
+      ctx.font = `bold ${fontSize}px Barlow, Arial, sans-serif`;
+      ctx.textBaseline = 'middle';
+      ctx.fillText(text, 16, canvas.height - hBarra / 2);
+      resolve(canvas.toDataURL('image/jpeg', 0.82));
+    };
+    img.src = base64;
+  });
+}
+
+/* ── Guardar registre ── */
+async function capSaveReg() {
+  const titol = document.getElementById('capTitol').value.trim();
+  if (!titol) { showToast('⚠️ Posa nom al projecte'); return; }
+
+  const data = { values: [], fotos: [] };
+
+  for (const [i, f] of _capFields.entries()) {
+    let val = '';
+    if (f.type === 'carretera' || f.type === 'text' || f.type === 'custom') {
+      val = document.querySelector(`.cap-dyn-input[data-idx="${i}"]`)?.value || '';
+    } else if (f.type === 'pk') {
+      const km = document.querySelector(`.cap-pk-km[data-idx="${i}"]`)?.value || '0';
+      const m  = document.querySelector(`.cap-pk-m[data-idx="${i}"]`)?.value || '000';
+      val = km + '+' + String(m).padStart(3, '0');
+    } else if (f.type === 'marge') {
+      val = document.querySelector(`.cap-dyn-marge[data-idx="${i}"]`)?.value || '';
+    } else if (f.type === 'obs') {
+      val = document.querySelector(`.cap-dyn-obs[data-idx="${i}"]`)?.value || '';
+    }
+    data.values.push({ label: f.label, val });
+  }
+
+  const showWm = document.getElementById('capWatermarkToggle')?.classList.contains('on');
+  const carr  = data.values.find(v => v.label.toLowerCase().includes('carretera'))?.val || '';
+  const pk    = data.values.find(v => v.label.toLowerCase().includes('pk'))?.val || '';
+  const marge = data.values.find(v => v.label.toLowerCase().includes('marge'))?.val || '';
+  const wm    = `${carr} · PK ${pk} · ${marge} · ${new Date().toLocaleString('ca-ES')}`;
+
+  for (const f of _capTmpFotos) {
+    data.fotos.push(showWm ? await aplicarMarcaAigua(f, wm) : f);
+  }
+
+  data.timestamp = Date.now();
+  data.isAnnex = false;
+
+  if (_capEditIdx > -1) {
+    _capRegs[_capEditIdx] = data;
+    _capEditIdx = -1;
+    document.getElementById('capBtnCancelarEdicio').style.display = 'none';
+  } else {
+    _capRegs.push(data);
+  }
+
+  _capTmpFotos = [];
+  capRenderPreview();
+  capUpdateRegCount();
+  await capGuardarProjecteDB();
+  showToast('💾 Registre guardat!');
+
+  // Netejar camps
+  _capFields.forEach((f, i) => {
+    if (f.type === 'carretera' || f.type === 'text' || f.type === 'custom') {
+      const el = document.querySelector(`.cap-dyn-input[data-idx="${i}"]`);
+      if (el && f.type !== 'carretera') el.value = '';
+    }
+    if (f.type === 'pk') {
+      const km = document.querySelector(`.cap-pk-km[data-idx="${i}"]`);
+      const m  = document.querySelector(`.cap-pk-m[data-idx="${i}"]`);
+      if (km) km.value = ''; if (m) m.value = '';
+    }
+    if (f.type === 'obs') {
+      const el = document.querySelector(`.cap-dyn-obs[data-idx="${i}"]`);
+      if (el) el.value = '';
+    }
+  });
+  capSetAutopkEstat('', '📡', 'Cerca la teva posició GPS...');
+}
+
+function capCancelarEdicio() {
+  _capEditIdx = -1;
+  _capTmpFotos = [];
+  capRenderPreview();
+  document.getElementById('capBtnCancelarEdicio').style.display = 'none';
+  showToast('Edició cancel·lada');
+}
+
+function capUpdateRegCount() {
+  const el = document.getElementById('capRegCount');
+  if (el) el.textContent = _capRegs.length;
+}
+
+/* ── Guardar a IndexedDB ── */
+async function capGuardarProjecteDB() {
+  const titol = document.getElementById('capTitol')?.value?.trim() || 'Sense títol';
+  const ara = new Date();
+  const obra = _capTipus === 'obra';
+
+  const projecte = {
+    id: _capCurId,
+    titulo: titol,
+    tipusEntrada: _capTipus,
+    fields: _capFields,
+    registros: _capRegs,
+    regs: _capRegs,
+    categoria: 'captura',
+    fecha: ara.toLocaleDateString('ca-ES'),
+    hora: ara.toTimeString().slice(0, 5),
+    timestamp: ara.getTime(),
+    ts_modificacio: ara.toISOString(),
+  };
+
+  if (obra) {
+    projecte.fecha_inicio = document.getElementById('capObraInici')?.value || '';
+    projecte.fecha_fin_estimada = document.getElementById('capObraFi')?.value || null;
+    projecte.porcentaje_progreso = parseInt(document.getElementById('capObraProgres')?.value) || 0;
+  }
+
+  await idbPut(STORES.PROJECTS, projecte);
+  await actualizarStatsDashboard();
+}
+
+/* ── Llista de registres (puntsLlistat) ── */
+function capRenderRegs() {
+  capUpdateRegCount();
+  const list = document.getElementById('capRegList');
+  if (!list) return;
+
+  if (!_capRegs.length) {
+    list.innerHTML = `<div class="inc-empty" style="padding:40px 10px">
+      <div style="font-size:2rem;margin-bottom:8px">📍</div>
+      <div class="inc-empty-text">Cap punt registrat encara</div>
+      <div style="font-size:.75rem;color:var(--t3);margin-top:4px">Torna al formulari per afegir el primer punt</div>
     </div>`;
     return;
   }
 
-  container.innerHTML = `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
-    ${fotos.map(f => `
-      <div style="aspect-ratio:1;border-radius:var(--r-sm);overflow:hidden;border:1px solid var(--border)">
-        <img src="${f.dataUrl}" style="width:100%;height:100%;object-fit:cover" alt="Foto">
-      </div>`).join('')}
-  </div>`;
-}
-
-/* ── Obra ── */
-function abrirModalObra() {
-  document.getElementById('obraTitulo').value = '';
-  document.getElementById('obraPkInicio').value = '';
-  document.getElementById('obraPkFin').value = '';
-  abrirModal('modalObra');
-}
-
-async function guardarObra() {
-  const titulo = document.getElementById('obraTitulo').value.trim();
-  if (!titulo) {
-    showToast('⚠️ Indica un título para la obra');
-    return;
-  }
-  const pkInici = parseFloat(document.getElementById('obraPkInicio').value) || 0;
-  const pkFi = parseFloat(document.getElementById('obraPkFin').value) || 0;
-
-  const proyecto = {
-    id: 'obra_' + Date.now(),
-    titulo,
-    categoria: 'obra',
-    carretera: CTX.carretera || '',
-    pkInici,
-    pkFi,
-    empresa: CTX.empresa || '',
-    regs: [],
-    ts_creacio: new Date().toISOString(),
-    ts_modificacio: new Date().toISOString()
-  };
-
-  await idbPut(STORES.PROJECTS, proyecto);
-  cerrarModal('modalObra');
-  showToast('✅ Obra creada');
-  await renderizarListaObras();
-}
-
-async function renderizarListaObras() {
-  const container = document.getElementById('obraListContainer');
-  if (!container) return;
-
-  let proyectos = (await idbGetAll(STORES.PROJECTS)).filter(p => p.categoria === 'obra');
-  proyectos.sort((a, b) => (b.ts_modificacio || '').localeCompare(a.ts_modificacio || ''));
-
-  if (proyectos.length === 0) {
-    container.innerHTML = `
-      <div class="inc-empty">
-        <svg viewBox="0 0 24 24"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg>
-        <div class="inc-empty-text">Sin obras registradas</div>
-      </div>`;
-    return;
-  }
-
-  container.innerHTML = proyectos.map(p => {
-    const numRegs = (p.regs || []).length;
-    const progreso = Math.min(100, numRegs * 10);
-    const tramo = (p.pkInici || p.pkFi) ? `PK ${p.pkInici} – ${p.pkFi}` : 'Sin tramo definido';
-    return `
-      <div class="obra-card" onclick="showToast('Detalle de obra — próxima fase')">
-        <div class="obra-card-title">${p.titulo}</div>
-        <div class="obra-card-meta">${p.carretera || CTX.carretera || '—'} · ${tramo}</div>
-        <div class="obra-progress-track"><div class="obra-progress-fill" style="width:${progreso}%"></div></div>
-        <div class="obra-card-foot">
-          <span>${numRegs} registro${numRegs === 1 ? '' : 's'}</span>
-          <span class="obra-badge" style="background:var(--accent-dim);color:var(--accent)">en curso</span>
+  list.innerHTML = _capRegs.map((r, i) => {
+    if (r.isAnnex) {
+      const rawText = r.annexText
+        ? (new DOMParser().parseFromString(r.annexText, 'text/html').body.textContent || '')
+        : '';
+      const preview = rawText.length > 80 ? rawText.slice(0, 78) + '…' : (rawText || '(Sense contingut)');
+      const hasTable = r.annexText?.includes('<table');
+      return `<div class="reg-item is-annex" data-idx="${i}">
+        <div class="drag-handle">≡</div>
+        <div class="reg-thumb-placeholder" style="background:var(--annex-lt);font-size:1.4rem">${hasTable ? '📊' : '📄'}</div>
+        <div class="reg-body">
+          <div class="reg-title">${r.annexTitol || 'Annex sense títol'}</div>
+          <div class="reg-meta" style="white-space:normal;line-height:1.35">${preview}</div>
+        </div>
+        <div class="reg-actions">
+          <button class="reg-action-btn" onclick="capEditarAnnex(${i})"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.8"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4Z"/></svg></button>
+          <button class="reg-action-btn danger" onclick="capEliminarReg(${i})"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.8"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg></button>
         </div>
       </div>`;
+    }
+
+    const carr = r.values?.find(v => v.label.toLowerCase().includes('carretera'))?.val || '—';
+    const pk   = r.values?.find(v => v.label.toLowerCase().includes('pk'))?.val || '—';
+    const mg   = r.values?.find(v => v.label.toLowerCase().includes('marge'))?.val || '';
+    const img  = r.fotos?.[0] || null;
+    const nF   = r.fotos?.length || 0;
+    const thumb = img
+      ? `<img class="reg-thumb" src="${img}" alt="">`
+      : `<div class="reg-thumb-placeholder"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.5"><path d="M12 21s-7-6.5-7-12a7 7 0 0 1 14 0c0 5.5-7 12-7 12Z"/><circle cx="12" cy="9" r="2.5"/></svg></div>`;
+
+    return `<div class="reg-item" data-idx="${i}">
+      <div class="drag-handle">≡</div>
+      ${thumb}
+      <div class="reg-body">
+        <div class="reg-title">${carr}</div>
+        <div class="reg-meta">PK ${pk}${mg ? ' · ' + mg : ''}</div>
+        ${nF ? `<div class="reg-foto-badge">📷 ${nF} foto${nF > 1 ? 's' : ''}</div>` : ''}
+      </div>
+      <div class="reg-actions">
+        <button class="reg-action-btn" onclick="capLoadE(${i})"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.8"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4Z"/></svg></button>
+        <button class="reg-action-btn danger" onclick="capEliminarReg(${i})"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.8"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg></button>
+      </div>
+    </div>`;
   }).join('');
-}
 
-/* ── Inventario ── */
-let _invTipoSeleccionado = null;
-let _invEstadoSeleccionado = null;
-
-function abrirModalInventario() {
-  _invTipoSeleccionado = null;
-  _invEstadoSeleccionado = null;
-  document.querySelectorAll('#invTypeGrid .type-option').forEach(b => b.classList.remove('selected'));
-  document.querySelectorAll('#invEstadoRow .estado-btn').forEach(b => b.classList.remove('selected'));
-  document.getElementById('invDescripcion').value = '';
-
-  const pkValueEl = document.getElementById('invPkValue');
-  const pkSubEl = document.getElementById('invPkSub');
-  if (GPS.pk) {
-    pkValueEl.textContent = `${GPS.pk.carretera || CTX.carretera} · PK ${Number(GPS.pk.pk).toFixed(3)}`;
-    pkSubEl.textContent = 'Posición detectada';
-  } else if (GPS.pos) {
-    pkValueEl.textContent = `${GPS.pos.lat.toFixed(4)}°N, ${GPS.pos.lng.toFixed(4)}°E`;
-    pkSubEl.textContent = `Precisión ±${Math.round(GPS.pos.acc)}m`;
-  } else {
-    pkValueEl.textContent = '— Detectando posición —';
-    pkSubEl.textContent = 'Buscando señal GPS…';
-    GPS.start();
+  // Sortable
+  if (typeof Sortable !== 'undefined') {
+    Sortable.create(list, {
+      animation: 150,
+      handle: '.drag-handle',
+      ghostClass: 'sortable-ghost',
+      chosenClass: 'sortable-chosen',
+      onEnd() {
+        const newRegs = [];
+        list.querySelectorAll('.reg-item').forEach(el => {
+          const idx = parseInt(el.dataset.idx);
+          if (!isNaN(idx) && _capRegs[idx] !== undefined) newRegs.push(_capRegs[idx]);
+        });
+        if (newRegs.length === _capRegs.length) {
+          _capRegs = newRegs;
+          capGuardarProjecteDB();
+        }
+        capRenderRegs();
+      }
+    });
   }
-
-  abrirModal('modalInventario');
 }
 
-function seleccionarTipoInv(btn) {
-  document.querySelectorAll('#invTypeGrid .type-option').forEach(b => b.classList.remove('selected'));
-  btn.classList.add('selected');
-  _invTipoSeleccionado = btn.dataset.tipo;
-}
-
-function seleccionarEstadoInv(btn) {
-  document.querySelectorAll('#invEstadoRow .estado-btn').forEach(b => b.classList.remove('selected'));
-  btn.classList.add('selected');
-  _invEstadoSeleccionado = btn.dataset.estado;
-}
-
-async function guardarInventario() {
-  if (!_invTipoSeleccionado) {
-    showToast('⚠️ Selecciona el tipo de activo');
-    return;
-  }
-  if (!_invEstadoSeleccionado) {
-    showToast('⚠️ Selecciona el estado del activo');
-    return;
-  }
-
-  const activo = {
-    tipo: _invTipoSeleccionado,
-    carretera: GPS.pk?.carretera || CTX.carretera || '',
-    pk: GPS.pk?.pk ?? null,
-    sentido: CTX.sentido || 'Indeterminado',
-    estado: _invEstadoSeleccionado,
-    descripcion: document.getElementById('invDescripcion').value.trim(),
-    fotoId: null,
-    lat: GPS.pos?.lat ?? null,
-    lng: GPS.pos?.lng ?? null,
-    ts: new Date().toISOString()
-  };
-
-  await idbPut(STORES.INVENTARIO, activo);
-  cerrarModal('modalInventario');
-  showToast('✅ Activo guardado en inventario');
-  await renderizarListaInventario();
-}
-
-async function renderizarListaInventario() {
-  const container = document.getElementById('invListContainer');
-  if (!container) return;
-
-  let activos = await idbGetAll(STORES.INVENTARIO);
-  activos.sort((a, b) => (b.ts || '').localeCompare(a.ts || ''));
-
-  if (activos.length === 0) {
-    container.innerHTML = `
-      <div class="inc-empty">
-        <svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/></svg>
-        <div class="inc-empty-text">Sin activos en el inventario</div>
-      </div>`;
-    return;
-  }
-
-  const colorEstado = { Bueno: 'var(--green)', Regular: 'var(--amber)', Malo: 'var(--red)' };
-  const dimEstado = { Bueno: 'var(--green-dim)', Regular: 'var(--amber-dim)', Malo: 'var(--red-dim)' };
-
-  container.innerHTML = activos.map(a => {
-    const pkTexto = a.pk != null ? `PK ${Number(a.pk).toFixed(3)}` : 'Sin PK';
-    return `
-      <div class="inv-card">
-        <div class="inv-status-dot" style="background:${colorEstado[a.estado] || 'var(--t3)'}"></div>
-        <div class="inv-card-body">
-          <div class="inv-card-title">${a.tipo}</div>
-          <div class="inv-card-meta">${a.carretera || '—'} · ${pkTexto}${a.descripcion ? ' · ' + a.descripcion : ''}</div>
-        </div>
-        <div class="inv-card-state" style="background:${dimEstado[a.estado] || 'var(--bg-3)'};color:${colorEstado[a.estado] || 'var(--t3)'}">${a.estado}</div>
-      </div>`;
-  }).join('');
-}
-
-/* ──────────────────────────────────────────────────────────
-   PANEL DE MAPEO DE CARRETERAS — sesión de marcado manual
-   Corrige mapeos incorrectos del seed oficial sobre el terreno.
-   ────────────────────────────────────────────────────────── */
-let _mapeoSesion = [];
-let _mapeoDireccion = 'asc';
-let _mapeoCarrFijada = false;
-
-function setDireccionMapeo(dir) {
-  _mapeoDireccion = dir;
-  document.getElementById('dirAsc').classList.toggle('active', dir === 'asc');
-  document.getElementById('dirDesc').classList.toggle('active', dir === 'desc');
-}
-
-async function guardarPuntoMapeo() {
-  const carrInput = document.getElementById('mapeoCarretera');
-  const carr = carrInput.value.trim().toUpperCase();
-  const km = parseInt(document.getElementById('mapeoKm').value);
-  const m = Math.min(999, parseInt(document.getElementById('mapeoM').value) || 0);
-
-  if (!carr) { showToast('⚠️ Introduce la carretera primero'); return; }
-  if (isNaN(km)) { showToast('⚠️ Introduce el PK (km)'); return; }
-
-  const btn = document.getElementById('btnMapeoGuardar');
-  const statusEl = document.getElementById('mapeoGpsStatus');
-  btn.classList.add('loading');
-  statusEl.textContent = '📡 Obteniendo posición exacta…';
-
-  try {
-    const pos = await new Promise((resolve, reject) =>
-      navigator.geolocation.getCurrentPosition(
-        p => resolve({ lat: p.coords.latitude, lng: p.coords.longitude, acc: p.coords.accuracy }),
-        reject,
-        { enableHighAccuracy: true, timeout: 15000, maximumAge: 2000 }
-      )
-    );
-
-    const punto = await guardarPuntoTraza(carr, km, m, pos.lat, pos.lng, pos.acc);
-    _mapeoSesion.push(punto);
-    carrInput.disabled = true;
-
-    const nextKm = _mapeoDireccion === 'asc' ? km + 1 : Math.max(0, km - 1);
-    document.getElementById('mapeoKm').value = nextKm;
-    document.getElementById('mapeoM').value = 0;
-
-    statusEl.textContent = `✅ PK ${km}+${String(m).padStart(3, '0')} guardado · ±${Math.round(pos.acc)} m`;
-    showToast(`✅ ${carr} PK ${km}+${String(m).padStart(3, '0')} guardado`);
-
-    document.getElementById('btnMapeoDeshacer').style.display = 'flex';
-    renderizarSesionMapeo();
-    await renderizarPanelMapeo();
-
-  } catch (e) {
-    statusEl.textContent = '⚠️ Sin GPS — reintenta';
-    showToast('⚠️ No se pudo obtener GPS. Reintenta.');
-  }
-
-  btn.classList.remove('loading');
-}
-
-async function deshacerPuntoMapeo() {
-  if (!_mapeoSesion.length) return;
-  const ultimo = _mapeoSesion[_mapeoSesion.length - 1];
-  await idbDelete(STORES.TRAZAS, ultimo.id);
-  _mapeoSesion.pop();
-
-  document.getElementById('mapeoKm').value = ultimo.km;
-  document.getElementById('mapeoM').value = ultimo.m;
-
-  if (!_mapeoSesion.length) {
-    document.getElementById('mapeoCarretera').disabled = false;
-    document.getElementById('btnMapeoDeshacer').style.display = 'none';
-  }
-
-  showToast('↺ Punto deshecho');
-  renderizarSesionMapeo();
-  await renderizarPanelMapeo();
-}
-
-function renderizarSesionMapeo() {
-  const container = document.getElementById('mapeoSessionList');
-  if (!_mapeoSesion.length) { container.innerHTML = ''; return; }
-
-  container.innerHTML = `<div class="section-label" style="margin-top:16px">Puntos de esta sesión</div>` +
-    _mapeoSesion.slice().reverse().map(p => `
-      <div class="mapeo-point-row">
-        <div>
-          <span class="mapeo-point-pk">PK ${p.km}+${String(p.m).padStart(3, '0')}</span>
-          ${p.acc ? `<span class="mapeo-point-acc">±${p.acc} m</span>` : ''}
-        </div>
-      </div>`).join('');
-}
-
-async function renderizarPanelMapeo() {
-  const container = document.getElementById('mapeoResumenContainer');
-  if (!container) return;
-
-  const todas = await idbGetAll(STORES.TRAZAS);
-  const exclusiones = await idbGetAll(STORES.EXCLUSIONS);
-
-  if (!todas.length) {
-    container.innerHTML = `
-      <div class="inc-empty">
-        <svg viewBox="0 0 24 24"><path d="M12 21s-7-6.5-7-12a7 7 0 0 1 14 0c0 5.5-7 12-7 12Z"/><circle cx="12" cy="9" r="2.5"/></svg>
-        <div class="inc-empty-text">Sin puntos guardados aún</div>
-      </div>`;
-    return;
-  }
-
-  const grupos = {};
-  todas.forEach(t => {
-    if (!grupos[t.carretera]) grupos[t.carretera] = [];
-    grupos[t.carretera].push(t);
+function capLoadE(i) {
+  _capEditIdx = i;
+  const r = _capRegs[i];
+  document.getElementById('capBtnCancelarEdicio').style.display = 'block';
+  _capFields.forEach((f, fi) => {
+    const item = r.values?.find(v => v.label.toLowerCase() === f.label.toLowerCase()) || r.values?.[fi];
+    if (!item) return;
+    if (f.type === 'carretera' || f.type === 'text' || f.type === 'custom') {
+      const el = document.querySelector(`.cap-dyn-input[data-idx="${fi}"]`);
+      if (el) el.value = item.val;
+    }
+    if (f.type === 'pk') {
+      const p = item.val.split('+');
+      const elKm = document.querySelector(`.cap-pk-km[data-idx="${fi}"]`);
+      const elM  = document.querySelector(`.cap-pk-m[data-idx="${fi}"]`);
+      if (elKm) elKm.value = p[0]; if (elM) elM.value = p[1];
+    }
+    if (f.type === 'marge') { const el = document.querySelector(`.cap-dyn-marge[data-idx="${fi}"]`); if (el) el.value = item.val; }
+    if (f.type === 'obs')   { const el = document.querySelector(`.cap-dyn-obs[data-idx="${fi}"]`);   if (el) el.value = item.val; }
   });
+  _capTmpFotos = [...(r.fotos || [])];
+  capRenderPreview();
+  capAnarForm();
+}
 
-  container.innerHTML = Object.keys(grupos).sort().map((carr, idx) => {
-    const puntos = grupos[carr].sort((a, b) => (a.km + a.m / 1000) - (b.km + b.m / 1000));
-    const exclCarr = exclusiones.filter(e => e.carretera === carr);
-    const bodyId = `mapeoAcc_${idx}`;
+async function capEliminarReg(i) {
+  if (!confirm('Borrar aquest punt?')) return;
+  _capRegs.splice(i, 1);
+  await capGuardarProjecteDB();
+  capRenderRegs();
+  showToast('🗑️ Punt eliminat');
+}
 
-    return `
-      <div class="mapeo-accordion">
-        <div class="mapeo-acc-header" onclick="toggleMapeoAccordion('${bodyId}')">
-          <span class="mapeo-acc-chev" id="${bodyId}_chev">▶</span>
-          <span class="mapeo-acc-road">${carr}</span>
-          <span class="mapeo-acc-count">${puntos.length} pto${puntos.length !== 1 ? 's' : ''}${exclCarr.length ? ' · 🚫' + exclCarr.length : ''}</span>
-          <button class="mapeo-acc-export" onclick="event.stopPropagation();exportarTrazasDeCarretera('${carr.replace(/'/g, "\\'")}')" aria-label="Exportar">
-            <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-          </button>
-        </div>
-        <div class="mapeo-acc-body" id="${bodyId}">
-          ${puntos.map(p => `
-            <div class="mapeo-point-row" style="margin:6px 10px">
-              <div>
-                <span class="mapeo-point-pk">PK ${p.km}+${String(p.m).padStart(3, '0')}</span>
-                ${p.acc ? `<span class="mapeo-point-acc">±${p.acc} m</span>` : ''}
-              </div>
-              <button class="mapeo-point-del" onclick="borrarPuntoMapeo(${p.id})" aria-label="Borrar">
-                <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-              </button>
-            </div>`).join('')}
-        </div>
-      </div>`;
+/* ── Annexos des de puntsLlistat ── */
+function capObrirAnnex() {
+  const form = document.getElementById('capAnnexFormInline');
+  if (!form) return;
+  delete form.dataset.editIdx;
+  form.style.display = 'block';
+  document.getElementById('capAnnexTitol').value = '';
+  document.getElementById('capAnnexEditor').innerHTML = '';
+  setTimeout(() => form.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80);
+}
+
+function capTancarAnnex() {
+  const form = document.getElementById('capAnnexFormInline');
+  if (!form) return;
+  form.style.display = 'none';
+  document.getElementById('capAnnexEditor').innerHTML = '';
+  delete form.dataset.editIdx;
+}
+
+function capEditarAnnex(i) {
+  const r = _capRegs[i];
+  if (!r?.isAnnex) return;
+  const form = document.getElementById('capAnnexFormInline');
+  if (!form) return;
+  form.dataset.editIdx = i;
+  document.getElementById('capAnnexTitol').value = r.annexTitol || '';
+  document.getElementById('capAnnexEditor').innerHTML = r.annexText || '';
+  form.style.display = 'block';
+  setTimeout(() => form.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80);
+}
+
+async function capGuardarAnnex() {
+  const form = document.getElementById('capAnnexFormInline');
+  const editIdx = form?.dataset.editIdx !== undefined && form.dataset.editIdx !== '' ? parseInt(form.dataset.editIdx) : -1;
+  const titol = document.getElementById('capAnnexTitol').value.trim();
+  const htmlContent = document.getElementById('capAnnexEditor').innerHTML.trim();
+  if (!titol) { showToast("⚠️ Cal posar un títol a l'annex"); return; }
+
+  const annexReg = { isAnnex: true, annexTitol: titol, annexText: htmlContent, fotos: [], timestamp: Date.now() };
+  if (editIdx > -1) _capRegs[editIdx] = annexReg;
+  else _capRegs.push(annexReg);
+
+  await capGuardarProjecteDB();
+  capTancarAnnex();
+  capRenderRegs();
+  showToast(editIdx > -1 ? '📄 Annex actualitzat' : '📄 Annex afegit');
+}
+
+/* El capAnnexEditor usa les mateixes funcions annexInsertTable etc. (ja definides) */
+
+/* ── Recents ── */
+async function capRenderRecents() {
+  const cont = document.getElementById('capRecentsList');
+  if (!cont) return;
+  const tots = await idbGetAll(STORES.PROJECTS);
+  const recents = tots
+    .filter(p => p.categoria === 'captura' || p.tipusEntrada)
+    .sort((a, b) => (b.ts_modificacio || '').localeCompare(a.ts_modificacio || ''))
+    .slice(0, 8);
+
+  if (!recents.length) {
+    cont.innerHTML = '<div class="inc-empty" style="padding:24px 0"><div class="inc-empty-text">Sense treballs recents</div></div>';
+    return;
+  }
+
+  const colorsT = { inventari: 'var(--cat-inv)', obra: 'var(--cat-obra)', personalitzat: 'var(--cat-custom)' };
+  cont.innerHTML = recents.map(p => {
+    const color = colorsT[p.tipusEntrada] || 'var(--accent)';
+    const nRegs = (p.registros || p.regs || []).length;
+    return `<div class="hist-card" onclick="capObrirProjecteExistent('${p.id}')">
+      <div class="hist-icon" style="background:${color}22;color:${color}">
+        <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><polyline points="14 2 14 8 20 8"/></svg>
+      </div>
+      <div class="hist-body">
+        <div class="hist-title">${p.titulo}</div>
+        <div class="hist-meta">${p.tipusEntrada || '—'} · ${nRegs} punts · ${p.fecha || '—'}</div>
+      </div>
+    </div>`;
   }).join('');
 }
 
-function toggleMapeoAccordion(bodyId) {
-  const body = document.getElementById(bodyId);
-  const chev = document.getElementById(bodyId + '_chev');
-  const open = body.classList.toggle('open');
-  chev.classList.toggle('open', open);
+async function capObrirProjecteExistent(id) {
+  const p = await idbGet(STORES.PROJECTS, id);
+  if (!p) { showToast('⚠️ Projecte no trobat'); return; }
+  _capCurId = p.id;
+  _capTipus = p.tipusEntrada || 'inventari';
+  _capFields = p.fields || [];
+  _capRegs = p.registros || p.regs || [];
+  _capTmpFotos = [];
+  _capEditIdx = -1;
+  document.getElementById('capTitol').value = p.titulo || '';
+  if (_capTipus === 'obra') {
+    document.getElementById('capObraDetall').style.display = 'block';
+    document.getElementById('capObraInici').value = p.fecha_inicio || '';
+    document.getElementById('capObraFi').value = p.fecha_fin_estimada || '';
+    document.getElementById('capObraProgres').value = p.porcentaje_progreso || 0;
+  } else {
+    document.getElementById('capObraDetall').style.display = 'none';
+  }
+  capAnarPuntsLlistat();
 }
 
-async function borrarPuntoMapeo(id) {
-  await idbDelete(STORES.TRAZAS, id);
-  showToast('🗑️ Punto eliminado');
-  await renderizarPanelMapeo();
+/* ── Foto Ràpida (subtab Foto) ── */
+function iniciarFotoRapida(mode) {
+  if (mode === 'cam') document.getElementById('fCapRapida').click();
+  else document.getElementById('fGalRapida').click();
 }
 
-function cerrarMapeoOVolver() {
-  _mapeoSesion = [];
-  document.getElementById('mapeoCarretera').value = '';
-  document.getElementById('mapeoCarretera').disabled = false;
-  document.getElementById('mapeoKm').value = '';
-  document.getElementById('mapeoM').value = '';
-  document.getElementById('mapeoGpsStatus').textContent = '';
-  document.getElementById('btnMapeoDeshacer').style.display = 'none';
-  document.getElementById('mapeoSessionList').innerHTML = '';
-  volverAlDashboard();
+function handleFotoRapidaInput(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    _frFotoDataUrl = e.target.result;
+    const preview = document.getElementById('frPreview');
+    const pkTexto = GPS.pk
+      ? `${GPS.pk.carretera || CTX.carretera} · PK ${GPS.pk.km}+${String(GPS.pk.m).padStart(3, '0')}`
+      : (GPS.pos ? `${GPS.pos.lat.toFixed(4)}°N, ${GPS.pos.lng.toFixed(4)}°E` : 'Sense GPS');
+    preview.innerHTML = `
+      <img src="${_frFotoDataUrl}" alt="Foto capturada" style="width:100%;height:100%;object-fit:cover">
+      <div class="fr-pk-overlay">
+        <svg viewBox="0 0 24 24"><path d="M12 21s-7-6.5-7-12a7 7 0 0 1 14 0c0 5.5-7 12-7 12Z"/><circle cx="12" cy="9" r="2.5"/></svg>
+        <div class="fr-pk-overlay-text">${pkTexto}</div>
+      </div>`;
+    document.getElementById('btnGuardarFotoRapida').disabled = false;
+  };
+  reader.readAsDataURL(file);
+  if (!GPS.pos) GPS.start();
 }
 
-/* ──────────────────────────────────────────────────────────
-   UMBRAL DE CARRETERA Y LISTA NEGRA
-   ────────────────────────────────────────────────────────── */
-function abrirModalListaNegra() {
-  cerrarPaneles();
-  document.getElementById('listaNegraTextarea').value = (CTX.listaNegraCarreteras || []).join('\n');
-  abrirModal('modalListaNegra');
-}
+function tomarFotoRapida() { iniciarFotoRapida('cam'); }
 
-async function guardarListaNegra() {
-  const texto = document.getElementById('listaNegraTextarea').value;
-  const lista = texto.split(/[\n,]+/).map(s => s.trim().toUpperCase()).filter(Boolean);
-  await guardarContexto({ listaNegraCarreteras: lista });
-  document.getElementById('listaNegraCountValue').textContent = lista.length;
-  cerrarModal('modalListaNegra');
-  showToast(`✅ Lista negra actualizada (${lista.length})`);
-}
-
-function restaurarListaNegra() {
-  document.getElementById('listaNegraTextarea').value = '';
-}
-
-function guardarUmbral() {
-  const valor = parseInt(document.getElementById('umbralSlider').value);
-  guardarContexto({ umbralCarretera: valor });
-  document.getElementById('umbralValue').textContent = `${valor} m`;
-  cerrarModal('modalUmbral');
-  showToast(`✅ Umbral fijado a ${valor} m`);
-}
 
 /* ──────────────────────────────────────────────────────────
    MÓDULO MAPA — Leaflet, búsqueda unificada, mediciones
@@ -3786,24 +4796,61 @@ function inicializarMapa() {
   if (mapaInicializado) { setTimeout(() => mapa.invalidateSize(), 80); return; }
   if (typeof L === 'undefined') { showToast('⚠️ Mapa no disponible sin conexión'); return; }
 
-  const centroDefecto = GPS.pos ? [GPS.pos.lat, GPS.pos.lng] : [40.4168, -3.7038];
-  mapa = L.map('leafletMap', { zoomControl: false, attributionControl: false }).setView(centroDefecto, GPS.pos ? 15 : 6);
+  const centroDefecto = GPS.pos ? [GPS.pos.lat, GPS.pos.lng] : [41.65, 1.62];
+  mapa = L.map('leafletMap', { zoomControl: false, attributionControl: true }).setView(centroDefecto, GPS.pos ? 15 : 13);
 
-  const tileLayer = crearTileLayerOffline();
-  if (tileLayer) tileLayer.addTo(mapa);
+  /* ── Capa satélite ArcGIS (idéntico a PK·MAPA original) ── */
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    { attribution: 'ESRI World Imagery', maxZoom: 20 }).addTo(mapa);
+  L.tileLayer('https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
+    { maxZoom: 20, opacity: .8 }).addTo(mapa);
 
+  /* ── Pin naranja arrastrable (idéntico al original) ── */
+  const pinIcon = L.divIcon({
+    html: `<svg xmlns="http://www.w3.org/2000/svg" width="34" height="44" viewBox="0 0 34 44">
+      <filter id="dsp"><feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#000" flood-opacity=".4"/></filter>
+      <g filter="url(#dsp)">
+        <path d="M17 0C10.4 0 5 5.4 5 12c0 9.5 12 30 12 30s12-20.5 12-30C29 5.4 23.6 0 17 0z" fill="#E8631A"/>
+        <circle cx="17" cy="12" r="6" fill="#fff" opacity=".9"/>
+        <circle cx="17" cy="12" r="3" fill="#E8631A"/>
+      </g></svg>`,
+    className:'', iconSize:[34,44], iconAnchor:[17,44], popupAnchor:[0,-46]
+  });
+
+  const centro = GPS.pos ? [GPS.pos.lat, GPS.pos.lng] : centroDefecto;
+  mapaMarkerActual = L.marker(centro, { icon: pinIcon, draggable: true, zIndexOffset: 1000, title: 'Arrastra para calcular PK' }).addTo(mapa);
+
+  /* Arrastre en tiempo real → actualiza el panel PK */
+  const _debounce = (fn, ms) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
+  mapaMarkerActual.on('drag', _debounce(() => {
+    const ll = mapaMarkerActual.getLatLng();
+    pkmActualizarPanel(ll.lat, ll.lng, false);
+  }, 300));
+  mapaMarkerActual.on('dragend', async () => {
+    const ll = mapaMarkerActual.getLatLng();
+    await pkmActualizarPanel(ll.lat, ll.lng, true);
+    /* Expandir el sheet cuando termina el arrastre */
+    expandirPkMapaSheet();
+  });
+
+  /* Click en mapa → mueve el pin + calcula PK */
   mapa.on('click', (e) => onClicMapa(e.latlng.lat, e.latlng.lng));
 
   mapaInicializado = true;
   setTimeout(() => mapa.invalidateSize(), 100);
 
-  if (GPS.pos) colocarMarcadorPosicion(GPS.pos.lat, GPS.pos.lng);
+  if (GPS.pos) {
+    pkmActualizarPanel(GPS.pos.lat, GPS.pos.lng, true);
+  }
 }
 
 function onClicMapa(lat, lng) {
   if (_medirDistActivo) { agregarPuntoDistancia(lat, lng); return; }
   if (_medirAreaActivo) { agregarPuntoArea(lat, lng); return; }
-  colocarMarcadorPosicion(lat, lng);
+  /* Mueve el pin naranja al click */
+  if (mapaMarkerActual) mapaMarkerActual.setLatLng([lat, lng]);
+  pkmActualizarPanel(lat, lng, true);
+  expandirPkMapaSheet();
 }
 
 async function colocarMarcadorPosicion(lat, lng) {
@@ -3855,9 +4902,250 @@ function abrirStreetViewCoords(lat, lng) {
   window.open(`https://maps.google.com/?q=${lat},${lng}&layer=c&cbll=${lat},${lng}`, '_blank');
 }
 
+/* ──────────────────────────────────────────────────────────
+   PK·MAPA PANEL — panel inferior deslizante con resultado PK
+   y todas las funciones del panel original
+   ────────────────────────────────────────────────────────── */
+let _pkmUltimoResultado = null;
+let _pkmSheetExpandida = false;
+const PKM_LN_DEFAULT = ['SC', 'GI', 'B', 'T', 'L', 'V', 'MA'];
+
+function togglePkMapaSheet() {
+  const sheet = document.getElementById('pkMapaSheet');
+  if (!sheet) return;
+  _pkmSheetExpandida = !_pkmSheetExpandida;
+  sheet.classList.toggle('collapsed', !_pkmSheetExpandida);
+  sheet.classList.toggle('expanded', _pkmSheetExpandida);
+}
+function expandirPkMapaSheet() {
+  const sheet = document.getElementById('pkMapaSheet');
+  if (!sheet || _pkmSheetExpandida) return;
+  _pkmSheetExpandida = true;
+  sheet.classList.remove('collapsed');
+  sheet.classList.add('expanded');
+}
+function cerrarPkMapaSheet() {
+  const sheet = document.getElementById('pkMapaSheet');
+  if (!sheet) return;
+  _pkmSheetExpandida = false;
+  sheet.classList.add('collapsed');
+  sheet.classList.remove('expanded');
+}
+
+async function pkmActualizarPanel(lat, lng, calcular = true) {
+  const idleEl = document.getElementById('pkmResIdle');
+  const dataEl = document.getElementById('pkmResData');
+  const warnEl = document.getElementById('pkmResWarn');
+  const actEl  = document.getElementById('pkmActions');
+
+  if (!calcular) {
+    if (idleEl) idleEl.textContent = 'Calculando…';
+    return;
+  }
+
+  const resultado = await obtenerPKActual(lat, lng);
+  _pkmUltimoResultado = { resultado, lat, lng };
+
+  if (idleEl) idleEl.style.display = 'none';
+
+  if (resultado) {
+    const mStr = String(resultado.m).padStart(3, '0');
+    if (dataEl) {
+      dataEl.style.display = 'block';
+      document.getElementById('pkmResRoad').textContent = resultado.carretera;
+      document.getElementById('pkmResPK').textContent = `${resultado.km}+${mStr}`;
+      document.getElementById('pkmResDist').textContent = `${Math.round(resultado.dist)} m de la calzada`;
+      document.getElementById('pkmResCoords').textContent = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+    }
+    if (warnEl) warnEl.style.display = 'none';
+    if (actEl) actEl.style.display = 'flex';
+  } else {
+    if (dataEl) dataEl.style.display = 'none';
+    if (warnEl) {
+      warnEl.style.display = 'block';
+      const sub = document.getElementById('pkmResWarnSub');
+      if (sub) sub.textContent = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+    }
+    if (actEl) actEl.style.display = 'none';
+  }
+}
+
+function pkmAbrirMaps() {
+  if (!_pkmUltimoResultado) return;
+  const { lat, lng } = _pkmUltimoResultado;
+  window.open(`https://www.google.com/maps?q=${lat},${lng}`, '_blank');
+}
+
+function pkmCompartirWA() {
+  if (!_pkmUltimoResultado) return;
+  const { resultado, lat, lng } = _pkmUltimoResultado;
+  let texto;
+  if (resultado) {
+    const mStr = String(resultado.m).padStart(3,'0');
+    texto = `📍 ${resultado.carretera} PK ${resultado.km}+${mStr}\nCoordenadas: ${lat.toFixed(5)}, ${lng.toFixed(5)}\nhttps://maps.google.com/?q=${lat},${lng}`;
+  } else {
+    texto = `📍 Coordenadas: ${lat.toFixed(5)}, ${lng.toFixed(5)}\nhttps://maps.google.com/?q=${lat},${lng}`;
+  }
+  window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, '_blank');
+}
+
+async function pkmCopiar() {
+  if (!_pkmUltimoResultado) return;
+  const { resultado, lat, lng } = _pkmUltimoResultado;
+  let texto;
+  if (resultado) {
+    const mStr = String(resultado.m).padStart(3,'0');
+    texto = `${resultado.carretera} PK ${resultado.km}+${mStr} | ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+  } else {
+    texto = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+  }
+  try { await navigator.clipboard.writeText(texto); showToast('📋 Copiado'); }
+  catch { showToast('❌ Error al copiar'); }
+}
+
+function pkmAnarAPK() {
+  const carretera = (document.getElementById('pkmLkCarr')?.value || '').trim().toUpperCase();
+  const km = parseInt(document.getElementById('pkmLkKm')?.value) || 0;
+  const m = Math.min(999, parseInt(document.getElementById('pkmLkM')?.value) || 0);
+  if (!carretera) { showToast('⚠️ Introduce la carretera'); return; }
+  irAPkEnMapa(carretera, km, m);
+}
+
+function togglePkmCoordAccord() {
+  const body = document.getElementById('pkmCoordBody');
+  const arr = document.getElementById('pkmCoordArr');
+  if (!body) return;
+  const open = body.classList.toggle('open');
+  if (arr) arr.classList.toggle('open', open);
+}
+
+function pkmAnarACoords() {
+  const lat = parseFloat(document.getElementById('pkmCoordLat')?.value);
+  const lng = parseFloat(document.getElementById('pkmCoordLon')?.value);
+  if (isNaN(lat) || isNaN(lng)) { showToast('⚠️ Coordenadas no válidas'); return; }
+  if (lat < 35 || lat > 44 || lng < -10 || lng > 5) { showToast('⚠️ Coordenadas fuera de la Península'); return; }
+  if (mapa) mapa.flyTo([lat, lng], 16, { animate: true, duration: 1 });
+  if (mapaMarkerActual) mapaMarkerActual.setLatLng([lat, lng]);
+  pkmActualizarPanel(lat, lng, true);
+}
+
+/* ── Lista Negra del Panel ── */
+let _pkmListaNegra = [];
+
+function cargarPkmListaNegra() {
+  try {
+    const stored = localStorage.getItem('pkm_lista_negra');
+    _pkmListaNegra = stored ? JSON.parse(stored) : [...PKM_LN_DEFAULT];
+  } catch { _pkmListaNegra = [...PKM_LN_DEFAULT]; }
+  renderizarPkmListaNegra();
+}
+
+function guardarPkmListaNegra() {
+  try { localStorage.setItem('pkm_lista_negra', JSON.stringify(_pkmListaNegra)); } catch {}
+}
+
+function renderizarPkmListaNegra() {
+  const cont = document.getElementById('pkmLnTags');
+  if (!cont) return;
+  cont.innerHTML = _pkmListaNegra.map(c => `
+    <span class="pkm-ln-tag">${c}
+      <button class="pkm-ln-del" onclick="pkmLnEliminar('${c}')" aria-label="Eliminar ${c}">×</button>
+    </span>`).join('');
+  /* Actualizar en CTX también */
+  CTX.listaNegraCarreteras = [..._pkmListaNegra];
+}
+
+function pkmLnAfegir() {
+  const inp = document.getElementById('pkmLnInp');
+  const val = (inp?.value || '').trim().toUpperCase();
+  if (!val) return;
+  if (!_pkmListaNegra.includes(val)) {
+    _pkmListaNegra.push(val);
+    guardarPkmListaNegra();
+    renderizarPkmListaNegra();
+  }
+  if (inp) inp.value = '';
+}
+
+function pkmLnEliminar(carretera) {
+  _pkmListaNegra = _pkmListaNegra.filter(c => c !== carretera);
+  guardarPkmListaNegra();
+  renderizarPkmListaNegra();
+}
+
+function pkmLnReset() {
+  _pkmListaNegra = [...PKM_LN_DEFAULT];
+  guardarPkmListaNegra();
+  renderizarPkmListaNegra();
+  showToast('↺ Lista negra restaurada');
+}
+
+function togglePkmListaNegra() {
+  const body = document.getElementById('pkmLnBody');
+  const arr = document.getElementById('pkmLnArrow');
+  if (!body) return;
+  const open = body.style.display === 'none';
+  body.style.display = open ? 'block' : 'none';
+  if (arr) arr.textContent = open ? '▲' : '▼';
+}
+
+/* ── Medición: sincronizar toggle buttons del panel PK·MAPA ── */
+function _sincronizarTogglesDist() {
+  const btn = document.getElementById('pkmDistToggle');
+  const body = document.getElementById('pkmDistBody');
+  if (btn) { btn.classList.toggle('on', _medirDistActivo); btn.textContent = _medirDistActivo ? 'Activado' : 'Activar'; }
+  if (body) body.style.display = _medirDistActivo ? 'block' : 'none';
+  const salirBtn = document.getElementById('btnSalirMedicion');
+  if (salirBtn) salirBtn.classList.toggle('show', _medirDistActivo || _medirAreaActivo);
+}
+function _sincronizarTogglesArea() {
+  const btn = document.getElementById('pkmAreaToggle');
+  const body = document.getElementById('pkmAreaBody');
+  const cerrarPol = document.getElementById('btnCerrarPoligono');
+  if (btn) { btn.classList.toggle('on', _medirAreaActivo); btn.textContent = _medirAreaActivo ? 'Activado' : 'Activar'; }
+  if (body) body.style.display = _medirAreaActivo ? 'block' : 'none';
+  if (cerrarPol) cerrarPol.style.display = _medirAreaActivo ? 'flex' : 'none';
+  const salirBtn = document.getElementById('btnSalirMedicion');
+  if (salirBtn) salirBtn.classList.toggle('show', _medirDistActivo || _medirAreaActivo);
+}
+
+function salirMedicionActiva() {
+  if (_medirDistActivo) { cerrarMedicionDistancia(); }
+  if (_medirAreaActivo) { cerrarMedicionArea(); }
+  _sincronizarTogglesDist();
+  _sincronizarTogglesArea();
+}
+
+/* Override toggleMedirDistancia para sincronizar panel PK·MAPA */
+const _origToggleDist = toggleMedirDistancia;
+function toggleMedirDistancia() {
+  if (_medirAreaActivo) { cerrarMedicionArea(); _sincronizarTogglesArea(); }
+  _medirDistActivo = !_medirDistActivo;
+  if (mapa) mapa.getContainer().style.cursor = _medirDistActivo ? 'crosshair' : '';
+  if (!_medirDistActivo) limpiarMedicionDistancia();
+  else { showToast('Toca 2 puntos en el mapa para medir'); expandirPkMapaSheet(); }
+  _sincronizarTogglesDist();
+}
+
+/* Override toggleMedirArea para sincronizar panel PK·MAPA */
+const _origToggleArea = toggleMedirArea;
+function toggleMedirArea() {
+  if (_medirDistActivo) { cerrarMedicionDistancia(); _sincronizarTogglesDist(); }
+  _medirAreaActivo = !_medirAreaActivo;
+  if (mapa) mapa.getContainer().style.cursor = _medirAreaActivo ? 'crosshair' : '';
+  if (!_medirAreaActivo) limpiarMedicionArea();
+  else { showToast('Toca puntos en el mapa para formar el polígono'); expandirPkMapaSheet(); }
+  _sincronizarTogglesArea();
+}
+
+/* centrarEnMiPosicion y Street View ya definidos abajo */
 function abrirStreetViewMapa() {
-  if (mapaUltimoResultado) { abrirStreetViewCoords(mapaUltimoResultado.lat, mapaUltimoResultado.lng); return; }
-  if (mapa) { const c = mapa.getCenter(); abrirStreetViewCoords(c.lat, c.lng); return; }
+  if (_pkmUltimoResultado) {
+    const { lat, lng } = _pkmUltimoResultado;
+    window.open(`https://maps.google.com/?q=${lat},${lng}&layer=c&cbll=${lat},${lng}`, '_blank');
+    return;
+  }
+  if (mapa) { const c = mapa.getCenter(); window.open(`https://maps.google.com/?q=${c.lat},${c.lng}&layer=c&cbll=${c.lat},${c.lng}`, '_blank'); return; }
   showToast('⚠️ Sin posición para abrir Street View');
 }
 
@@ -3885,12 +5173,16 @@ function centrarEnMiPosicion() {
     const unsub = GPS.subscribe((event, data) => {
       if (event === 'position') {
         mapa.flyTo([data.pos.lat, data.pos.lng], 16, { animate: true, duration: 1 });
+        if (mapaMarkerActual) mapaMarkerActual.setLatLng([data.pos.lat, data.pos.lng]);
+        pkmActualizarPanel(data.pos.lat, data.pos.lng, true);
         unsub();
       }
     });
     return;
   }
   mapa.flyTo([GPS.pos.lat, GPS.pos.lng], 16, { animate: true, duration: 1 });
+  if (mapaMarkerActual) mapaMarkerActual.setLatLng([GPS.pos.lat, GPS.pos.lng]);
+  pkmActualizarPanel(GPS.pos.lat, GPS.pos.lng, true);
 }
 
 /* ── Capa de puntos PK guía — seed pintado como referencia ligera ──
@@ -4054,7 +5346,7 @@ function buscarCarreterasEnSeed(query) {
 
 function irAPkDesdeBusqueda(carretera, km, m) {
   document.getElementById('mapSearchDrop').classList.remove('open');
-  document.getElementById('mapSearchInput').value = `${carretera} ${km}+${String(m).padStart(3, '0')}`;
+  document.getElementById('mapSearchInput').value = `${carretera} ${km}+${String(m).padStart(3,'0')}`;
   irAPkEnMapa(carretera, km, m);
 }
 
@@ -4073,7 +5365,8 @@ function irACoordsEnMapa(lat, lng, nombre) {
   document.getElementById('mapSearchDrop').classList.remove('open');
   document.getElementById('mapSearchInput').value = nombre;
   mapa.flyTo([lat, lng], 15, { animate: true, duration: 1 });
-  colocarMarcadorPosicion(lat, lng);
+  if (mapaMarkerActual) mapaMarkerActual.setLatLng([lat, lng]);
+  pkmActualizarPanel(lat, lng, true);
 }
 
 function limpiarBusquedaMapa() {
@@ -4237,9 +5530,12 @@ function crearTileLayerOffline() {
 
 
 function irAPkExactoMapa() {
-  const carretera = document.getElementById('mapGotoCarretera').value.trim().toUpperCase();
-  const km = parseInt(document.getElementById('mapGotoKm').value) || 0;
-  const m = Math.min(999, parseInt(document.getElementById('mapGotoM').value) || 0);
+  const carretera = (document.getElementById('pkmLkCarr')?.value ||
+                     document.getElementById('mapGotoCarretera')?.value || '').trim().toUpperCase();
+  const km = parseInt(document.getElementById('pkmLkKm')?.value ||
+                       document.getElementById('mapGotoKm')?.value) || 0;
+  const m  = Math.min(999, parseInt(document.getElementById('pkmLkM')?.value ||
+                                    document.getElementById('mapGotoM')?.value) || 0);
   if (!carretera) { showToast('⚠️ Introduce la carretera'); return; }
   irAPkEnMapa(carretera, km, m);
 }
@@ -4257,10 +5553,10 @@ function irAPkEnMapa(carretera, km, m) {
     const diff = Math.abs(p[0] - pkObjetivo);
     if (diff < mejorDiff) { mejor = p; mejorDiff = diff; }
   }
-  cerrarHerramientasMapa();
   mapa.flyTo([mejor[1], mejor[2]], 16, { animate: true, duration: 1.1 });
-  colocarMarcadorPosicion(mejor[1], mejor[2]);
-  showToast(`${carretera} PK ${km}+${String(m).padStart(3, '0')} localizado`);
+  if (mapaMarkerActual) mapaMarkerActual.setLatLng([mejor[1], mejor[2]]);
+  pkmActualizarPanel(mejor[1], mejor[2], true);
+  showToast(`${carretera} PK ${km}+${String(m).padStart(3,'0')} localizado`);
 }
 
 /* ── Medición de distancia ── */
@@ -5405,6 +6701,7 @@ async function arrancarApp() {
     setBootStatus('Preparando panel…');
     actualizarSaludo();
     await actualizarStatsDashboard();
+    cargarPkmListaNegra();
 
     setBootStatus('Listo');
     document.getElementById('bootScreen').classList.add('hidden');
