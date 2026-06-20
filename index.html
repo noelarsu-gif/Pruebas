@@ -284,24 +284,59 @@ input,select,textarea{font-family:inherit}
 
 .btn-main{
   width:100%;
-  padding:15px 14px;
+  padding:13px 18px;
   border-radius:var(--r);
   border:1.5px solid var(--accent);
   background:var(--accent);
   color:#fff;
   font-family:var(--font-cond);
-  font-size:1.05rem;
-  font-weight:900;
-  letter-spacing:.8px;
+  font-size:.95rem;
+  font-weight:700;
+  letter-spacing:.6px;
   display:flex;
   align-items:center;
   justify-content:center;
   gap:8px;
   transition:var(--tr);
+  min-height:48px;
+  max-height:52px;
+  box-shadow:0 2px 8px rgba(232,99,26,.25);
 }
-.btn-main:active{transform:scale(.98);background:var(--accent-dark)}
-.btn-main.outline{background:var(--accent-dim);color:var(--accent)}
+.btn-main svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2.2;flex-shrink:0}
+.btn-main:active{transform:scale(.98);background:var(--accent-dark);box-shadow:none}
+.btn-main.outline{background:var(--accent-dim);color:var(--accent);border-color:var(--accent-bd);box-shadow:none}
 .btn-main.loading{pointer-events:none;opacity:.7}
+
+/* ── Botón guardar en modales — compacto, sticky abajo ── */
+.modal-save-row{
+  padding:12px 18px calc(16px + var(--safe-bottom));
+  border-top:1px solid var(--border);
+  background:var(--bg-1);
+  margin-top:4px;
+}
+.btn-save{
+  width:100%;
+  padding:14px 18px;
+  border-radius:var(--r);
+  border:none;
+  background:var(--accent);
+  color:#fff;
+  font-family:var(--font-cond);
+  font-size:1rem;
+  font-weight:700;
+  letter-spacing:.5px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:10px;
+  min-height:50px;
+  box-shadow:0 2px 10px rgba(232,99,26,.3);
+  transition:var(--tr);
+}
+.btn-save svg{width:18px;height:18px;stroke:#fff;fill:none;stroke-width:2.2;flex-shrink:0}
+.btn-save:active{transform:scale(.98);background:var(--accent-dark)}
+.btn-save-green{background:#16a34a;box-shadow:0 2px 10px rgba(22,163,74,.3)}
+.btn-save-green:active{background:#15803d}
 
 .btn-secondary{
   flex:1;
@@ -587,11 +622,11 @@ input,select,textarea{font-family:inherit}
 .modal-overlay.show{opacity:1;pointer-events:auto}
 .modal-sheet{
   background:var(--bg-1);border-radius:20px 20px 0 0;
-  width:100%;max-width:560px;max-height:88vh;
+  width:100%;max-width:560px;max-height:92vh;
   overflow-y:auto;
   transform:translateY(100%);
   transition:transform .28s cubic-bezier(.4,0,.2,1);
-  padding-bottom:calc(20px + var(--safe-bottom));
+  padding-bottom:0;
 }
 .modal-overlay.show .modal-sheet{transform:translateY(0)}
 .modal-handle{width:38px;height:4px;border-radius:3px;background:var(--bg-4);margin:10px auto}
@@ -602,7 +637,7 @@ input,select,textarea{font-family:inherit}
   display:flex;align-items:center;justify-content:center;
 }
 .modal-close svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2}
-.modal-body{padding:0 18px}
+.modal-body{padding:0 18px 4px}
 
 .type-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:14px}
 .type-option{
@@ -1372,12 +1407,19 @@ input,select,textarea{font-family:inherit}
 .inv-export-name{font-size:.86rem;font-weight:600;color:var(--t1)}
 .inv-export-sub{font-size:.7rem;color:var(--t3)}
 
-@media(min-width:561px){
-  .app-shell{
-    border-left:1px solid var(--border);
-    border-right:1px solid var(--border);
-  }
-}
+.module-card--inv{border-color:var(--cat-inv-bd);background:linear-gradient(135deg,var(--bg-card),var(--cat-inv-lt))}
+.module-card--inv:active{border-color:var(--cat-inv)}
+.module-card--inv .module-name{color:var(--cat-inv)}
+#invTabBar{display:flex;background:var(--bg-2);border-radius:var(--r-sm);overflow:hidden;margin-bottom:14px;border:1px solid var(--border)}
+#invTabBar .subtab{flex:1;padding:9px 4px;text-align:center;font-family:var(--font-cond);font-size:.75rem;font-weight:700;color:var(--t3);background:transparent;border:none}
+#invTabBar .subtab.active{background:var(--cat-inv);color:#fff}
+.inv-export-btn{width:100%;padding:13px 14px;border-radius:var(--r);display:flex;align-items:center;gap:12px;background:var(--bg-card);border:1px solid var(--border);transition:var(--tr);margin-bottom:8px;text-align:left}
+.inv-export-btn:active{border-color:var(--cat-inv);background:var(--cat-inv-lt)}
+.inv-export-icon{width:40px;height:40px;border-radius:var(--r-sm);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.inv-export-icon svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.8}
+.inv-export-name{font-size:.86rem;font-weight:600;color:var(--t1)}
+.inv-export-sub{font-size:.7rem;color:var(--t3)}
+@media(min-width:561px){.app-shell{border-left:1px solid var(--border);border-right:1px solid var(--border)}}
 </style>
 </head>
 <body>
@@ -2498,11 +2540,12 @@ input,select,textarea{font-family:inherit}
         <div class="photo-toggle-text" id="incPhotoLabel">Añadir foto (opcional)</div>
       </div>
 
-      <button class="btn-main" onclick="guardarIncidencia()" id="btnGuardarIncidencia">
-        <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
-        GUARDAR INCIDENCIA
-      </button>
-      <div style="height:8px"></div>
+      <div class="modal-save-row">
+        <button class="btn-save" onclick="guardarIncidencia()" id="btnGuardarIncidencia">
+          <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+          Guardar incidencia
+        </button>
+      </div>
 
     </div>
   </div>
@@ -2534,10 +2577,12 @@ input,select,textarea{font-family:inherit}
         <input class="field-input" id="obraPkFin" type="number" step="0.001" placeholder="135.000">
       </div>
 
-      <button class="btn-main" onclick="guardarObra()" id="btnGuardarObra">
-        <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
-        CREAR OBRA
-      </button>
+      <div class="modal-save-row">
+        <button class="btn-save" onclick="guardarObra()" id="btnGuardarObra">
+          <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+          Guardar obra
+        </button>
+      </div>
       <div style="height:8px"></div>
 
     </div>
@@ -2595,10 +2640,12 @@ input,select,textarea{font-family:inherit}
         <input class="field-input" id="invDescripcion" placeholder="Ej. Panel dañado, falta anclaje">
       </div>
 
-      <button class="btn-main" onclick="guardarInventario()" id="btnGuardarInventario" style="background:var(--purple);border-color:var(--purple)">
-        <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
-        GUARDAR ACTIVO
-      </button>
+      <div class="modal-save-row">
+        <button class="btn-save" onclick="guardarInventario()" id="btnGuardarInventario">
+          <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+          Guardar inventario
+        </button>
+      </div>
       <div style="height:8px"></div>
 
     </div>
@@ -2704,11 +2751,12 @@ input,select,textarea{font-family:inherit}
         </select>
       </div>
 
-      <button class="btn-main" onclick="guardarContextoDesdeModal()">
-        <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
-        GUARDAR CONTEXTO
-      </button>
-      <div style="height:8px"></div>
+      <div class="modal-save-row">
+        <button class="btn-save" onclick="guardarContextoDesdeModal()">
+          <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+          Guardar contexto
+        </button>
+      </div>
 
     </div>
   </div>
@@ -2854,7 +2902,9 @@ let db = null;
 
 function initDB() {
   return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    let req;
+    try { req = indexedDB.open(DB_NAME, DB_VERSION); }
+    catch(e) { console.warn('[IDB] Blocked:', e); return resolve(null); }
 
     req.onupgradeneeded = (e) => {
       const d = e.target.result;
@@ -2885,13 +2935,14 @@ function initDB() {
       resolve(db);
     };
 
-    req.onerror = (e) => reject(e.target.error);
+    req.onerror  = () => resolve(null);
+    req.onblocked = () => resolve(null);
   });
 }
 
 function idbGet(storeName, key) {
   return new Promise((resolve, reject) => {
-    if (!db) return reject(new Error('IndexedDB no inicializada'));
+    if (!db) return resolve(null);
     const tx = db.transaction(storeName, 'readonly');
     const req = tx.objectStore(storeName).get(key);
     req.onsuccess = () => resolve(req.result || null);
@@ -2901,7 +2952,7 @@ function idbGet(storeName, key) {
 
 function idbGetAll(storeName) {
   return new Promise((resolve, reject) => {
-    if (!db) return reject(new Error('IndexedDB no inicializada'));
+    if (!db) return resolve([]);
     const tx = db.transaction(storeName, 'readonly');
     const req = tx.objectStore(storeName).getAll();
     req.onsuccess = () => resolve(req.result || []);
@@ -2911,7 +2962,7 @@ function idbGetAll(storeName) {
 
 function idbPut(storeName, value) {
   return new Promise((resolve, reject) => {
-    if (!db) return reject(new Error('IndexedDB no inicializada'));
+    if (!db) return resolve(null);
     const tx = db.transaction(storeName, 'readwrite');
     const req = tx.objectStore(storeName).put(value);
     req.onsuccess = () => resolve(req.result);
@@ -2921,7 +2972,7 @@ function idbPut(storeName, value) {
 
 function idbDelete(storeName, key) {
   return new Promise((resolve, reject) => {
-    if (!db) return reject(new Error('IndexedDB no inicializada'));
+    if (!db) return resolve(true);
     const tx = db.transaction(storeName, 'readwrite');
     const req = tx.objectStore(storeName).delete(key);
     req.onsuccess = () => resolve(true);
@@ -2931,7 +2982,7 @@ function idbDelete(storeName, key) {
 
 function idbClear(storeName) {
   return new Promise((resolve, reject) => {
-    if (!db) return reject(new Error('IndexedDB no inicializada'));
+    if (!db) return resolve(true);
     const tx = db.transaction(storeName, 'readwrite');
     const req = tx.objectStore(storeName).clear();
     req.onsuccess = () => resolve(true);
@@ -3630,38 +3681,15 @@ async function actualizarStatsDashboard() {
 }
 
 function irAModulo(nombre) {
-  const mapaScreens = {
-    incidencias: 'screenIncidencias',
-    inventarios: 'screenInventarios',
-    mapa: 'screenMapa',
-    informes: 'screenInformes',
-    odometro: 'screenInformes'
-  };
-  const screenId = mapaScreens[nombre];
-  if (!screenId) return;
-  mostrarPantalla(screenId);
-
-  if (nombre === 'incidencias') renderizarListaIncidencias();
-  if (nombre === 'inventarios') { capAnarHome(); capRenderRecents(); }
-  if (nombre === 'mapa') inicializarMapa();
-  if (nombre === 'informes') renderizarHistorial();
-  if (nombre === 'odometro') {
-    const btn = document.querySelector('#screenInformes .subtab[data-sub="odometro"]');
-    if (btn) cambiarSubtabInformes(btn, 'odometro');
-  }
-};
-  const screenId = mapaScreens[nombre];
-  if (!screenId) return;
-  mostrarPantalla(screenId);
-
-  if (nombre === 'incidencias') renderizarListaIncidencias();
-  if (nombre === 'captura') renderizarFotosRecientes();
-  if (nombre === 'mapa') inicializarMapa();
-  if (nombre === 'informes') renderizarHistorial();
-  if (nombre === 'odometro') {
-    const btn = document.querySelector('#screenInformes .subtab[data-sub="odometro"]');
-    if (btn) cambiarSubtabInformes(btn, 'odometro');
-  }
+  const map = {incidencias:'screenIncidencias',inventarios:'screenInventarios',mapa:'screenMapa',informes:'screenInformes',odometro:'screenInformes'};
+  const sid = map[nombre];
+  if (!sid) return;
+  mostrarPantalla(sid);
+  if (nombre==='incidencias') renderizarListaIncidencias();
+  if (nombre==='inventarios') { capAnarHome(); try{capRenderRecents();}catch(e){} }
+  if (nombre==='mapa')        inicializarMapa();
+  if (nombre==='informes')    renderizarHistorial();
+  if (nombre==='odometro')    { const b=document.querySelector('#screenInformes .subtab[data-sub="odometro"]'); if(b) cambiarSubtabInformes(b,'odometro'); }
 }
 
 function abrirParteDiario() {
@@ -4149,6 +4177,61 @@ async function capExportarZIPFotos() {
   a.href = url; a.download = `SDV_Fotos_${new Date().toISOString().slice(0,10)}.zip`;
   a.click(); URL.revokeObjectURL(url);
   showToast(`✅ ZIP generado · ${count} fotos`);
+}
+
+/* ── Inventarios tab navigation ── */
+function invCambiarTab(btn, sub) {
+  if (!btn) return;
+  document.querySelectorAll('#invTabBar .subtab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  const p={nuevo:'subNuevoInv',historial:'subHistorial',descargas:'subDescargas'};
+  document.querySelectorAll('#capHome .subpanel').forEach(x=>x.classList.remove('active'));
+  const t=document.getElementById(p[sub]); if(t) t.classList.add('active');
+  if(sub==='historial') { try{capRenderRecents(document.getElementById('histInvList'));}catch(e){} }
+}
+function capExportarPDF() { try{exportarInformePDF({titulo:'INVENTARI',incluirFotos:true});}catch(e){showToast('⚠️ '+e.message);} }
+async function capExportarExcel() {
+  if(typeof XLSX==='undefined'){showToast('⚠️ XLSX no disponible');return;}
+  try {
+    const ps=await idbGetAll(STORES.PROJECTS), rows=[];
+    ps.forEach(p=>(p.registros||p.regs||[]).forEach((r,i)=>{
+      const row={Projecte:p.titulo||'—',Index:i+1};
+      (p.fields||[]).forEach(f=>{row[f.label||f.type]=r[f.id]||'';});
+      if(r.carretera)row.Carretera=r.carretera;
+      if(r.pk!=null)row.PK=r.pk;
+      if(r.marge)row.Marge=r.marge;
+      rows.push(row);
+    }));
+    if(!rows.length){showToast('⚠️ Sense dades');return;}
+    const wb=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows),'Inventari');
+    XLSX.writeFile(wb,`SDV_Inventari_${new Date().toISOString().slice(0,10)}.xlsx`);
+    showToast('✅ Excel exportat');
+  } catch(e){showToast('⚠️ '+e.message);}
+}
+async function capExportarZIPFotos() {
+  if(typeof JSZip==='undefined'){showToast('⚠️ JSZip no disponible');return;}
+  try {
+    const ps=await idbGetAll(STORES.PROJECTS), zip=new JSZip(); let n=0;
+    for(const p of ps) for(let i=0;i<(p.registros||p.regs||[]).length;i++){
+      const r=(p.registros||p.regs)[i];
+      for(let j=0;j<(r.fotos||[]).length;j++){
+        const f=r.fotos[j]; if(!f?.dataUrl) continue;
+        const b64=f.dataUrl.split(',')[1]; if(!b64) continue;
+        const ctra=(r.carretera||p.titulo||'X').replace(/[^a-zA-Z0-9-]/g,'_');
+        const pk=r.pk!=null?String(r.pk).replace('.','p'):'0';
+        const mg=(r.marge||'S').replace(/[^a-zA-Z0-9]/g,'_');
+        zip.file(`${ctra}_PK${pk}_${mg}_${i+1}_${j+1}.jpg`,b64,{base64:true}); n++;
+      }
+    }
+    if(!n){showToast('⚠️ Sense fotos');return;}
+    const blob=await zip.generateAsync({type:'blob'});
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download=`SDV_Fotos_${new Date().toISOString().slice(0,10)}.zip`;
+    a.click(); URL.revokeObjectURL(a.href);
+    showToast(`✅ ZIP: ${n} fotos`);
+  } catch(e){showToast('⚠️ '+e.message);}
 }
 
 function cambiarSubtabCaptura(btn, sub) {
@@ -6683,43 +6766,33 @@ function setBootStatus(msg) {
 }
 
 async function arrancarApp() {
+  const _hide = () => { const bs=document.getElementById('bootScreen'); if(bs) bs.classList.add('hidden'); };
+  const _guard = setTimeout(_hide, 6000);
   try {
-    setBootStatus('Conectando base de datos…');
-    await initDB();
-
-    setBootStatus('Cargando contexto…');
-    await cargarContexto();
-    await cargarExclusiones();
-
-    if (seedDisponible()) {
-      setBootStatus(`Mapa offline listo · ${contarPuntosSeed().toLocaleString('es-ES')} puntos`);
-    } else {
-      setBootStatus('⚠️ Seed de carreteras no disponible');
-      console.warn('[BOOT] PK_SEED_para_app.js no se cargó. La detección automática de PK no funcionará hasta que el archivo esté presente junto a index.html.');
-    }
-
-    setBootStatus('Preparando panel…');
-    actualizarSaludo();
-    await actualizarStatsDashboard();
-    cargarPkmListaNegra();
-
-    setBootStatus('Listo');
-    document.getElementById('bootScreen').classList.add('hidden');
-
-    if (!CTX.carretera) {
-      setTimeout(() => {
-        showToast('👋 Bienvenido. Configura tu carretera para empezar.', 3000);
-        setTimeout(abrirEdicionContexto, 1200);
-      }, 400);
-    }
-
-  } catch (e) {
-    console.error('[BOOT] Error de arranque:', e);
-    setBootStatus('Error: ' + (e.message || 'no se pudo iniciar'));
+    setBootStatus('Conectando BD…');
+    try { await initDB(); } catch(e) { console.warn('[BOOT] DB:',e); }
+    setBootStatus('Cargando…');
+    try { await cargarContexto(); } catch(e) {}
+    try { await cargarExclusiones(); } catch(e) {}
+    try { setBootStatus(seedDisponible() ? `PKs listos` : 'Sin seed'); } catch(e) {}
+    try { actualizarSaludo(); } catch(e) {}
+    try { await actualizarStatsDashboard(); } catch(e) {}
+    try { cargarPkmListaNegra(); } catch(e) {}
+    clearTimeout(_guard);
+    setBootStatus('Listo ✓');
+    _hide();
+    if (!CTX.carretera) setTimeout(()=>{ showToast('👋 Configura tu carretera para empezar',3000); try{setTimeout(abrirEdicionContexto,1200);}catch(e){} }, 400);
+  } catch(e) {
+    console.error('[BOOT]',e);
+    clearTimeout(_guard);
+    _hide();
   }
 }
 
-window.addEventListener('DOMContentLoaded', arrancarApp);
+window.addEventListener('DOMContentLoaded', () => {
+  arrancarApp();
+  setTimeout(() => { const bs=document.getElementById('bootScreen'); if(bs&&!bs.classList.contains('hidden')) bs.classList.add('hidden'); }, 9000);
+});
 
 /* ──────────────────────────────────────────────────────────
    SERVICE WORKER
